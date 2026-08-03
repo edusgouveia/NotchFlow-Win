@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>pt_BR</string>
+    <key>CFBundleDisplayName</key>
+    <string>NotchFlow</string>
+    <key>CFBundleExecutable</key>
+    <string>NotchFlow</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.thiagoalves.NotchFlow</string>
+    <key>CFBundleIconFile</key>
+    <string>NotchFlow.icns</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>NotchFlow</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>O NotchFlow controla a reprodução no Apple Music e no Spotify.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>O NotchFlow lê seus próximos eventos para mostrá-los no notch. O aplicativo não altera seu calendário.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>O NotchFlow lê seus próximos eventos para mostrá-los no notch.</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+</dict>
+</plist>

@@ -1,0 +1,57 @@
+name: macOS Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-14
+    env:
+      NOTCHFLOW_BUILD_ARCH: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Validate version
+        run: |
+          APP_VERSION="$(plutil -extract CFBundleShortVersionString raw Configuration/Info.plist)"
+          if [[ "${GITHUB_REF_NAME}" != "v${APP_VERSION}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} não corresponde à versão v${APP_VERSION}."
+            exit 1
+          fi
+
+      - name: Security checks
+        run: ./Scripts/security-check.sh
+
+      - name: Build application
+        run: ./Scripts/build-app.sh
+
+      - name: Package download
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent dist/NotchFlow.app dist/NotchFlow-macOS-arm64.zip
+          cd dist
+          shasum -a 256 NotchFlow-macOS-arm64.zip > SHA256SUMS.txt
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/NotchFlow-macOS-arm64.zip \
+            dist/SHA256SUMS.txt \
+            --verify-tag \
+            --generate-notes \
+            --title "NotchFlow ${GITHUB_REF_NAME}"
