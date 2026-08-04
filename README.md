@@ -7,6 +7,7 @@
 
   [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111827?logo=apple)](https://www.apple.com/macos/)
   [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
+  [![License: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-22c55e.svg)](LICENSE)
   [![CI](https://github.com/Thiagof2755/NotchFlow-swift/actions/workflows/ci.yml/badge.svg)](https://github.com/Thiagof2755/NotchFlow-swift/actions/workflows/ci.yml)
   [![Privacy](https://img.shields.io/badge/privacidade-local--first-22c55e)](PRIVACY.md)
 
@@ -163,6 +164,10 @@ NotchFlow-swift/
 
 O NotchFlow está em desenvolvimento inicial. Use a seção de [Issues](https://github.com/Thiagof2755/NotchFlow-swift/issues) para problemas não sensíveis.
 
+## Contribuindo
+
+O NotchFlow é open source e aceita contribuições da comunidade. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para preparar mudanças, executar as verificações e abrir um pull request.
+
 ## Licença
 
-Copyright © 2026 Thiago Alves. O código está disponível para visualização e auditoria, mas não é open source enquanto permanecer sob a licença atual de direitos reservados. Consulte [LICENSE](LICENSE).
+Distribuído sob a [licença MIT](LICENSE). Você pode usar, estudar, modificar e distribuir o NotchFlow, inclusive comercialmente, desde que preserve o aviso de copyright e a licença.

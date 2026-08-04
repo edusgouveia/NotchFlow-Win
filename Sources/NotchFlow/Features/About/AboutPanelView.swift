@@ -48,7 +48,7 @@ struct AboutPanelView: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Label("Projeto independente", systemImage: "sparkles")
-                Label("Código no GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                Label("Open source • \(ProjectInfo.license)", systemImage: "chevron.left.forwardslash.chevron.right")
                 Label("Feito para macOS", systemImage: "apple.logo")
             }
             .font(.system(size: 8.5, weight: .medium))
