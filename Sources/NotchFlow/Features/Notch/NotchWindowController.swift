@@ -13,7 +13,7 @@ final class NotchWindowController {
         }
     }
 
-    private let windowSize = CGSize(width: 628, height: 252)
+    private let windowSize = NotchGeometry.windowSize
     private let sharedViewModel: NotchFlowViewModel
     private var displays: [CGDirectDisplayID: DisplayContext] = [:]
     private var screenObserver: NSObjectProtocol?
@@ -48,6 +48,11 @@ final class NotchWindowController {
         synchronizeDisplays()
     }
 
+    /// Reaplica as preferências, por exemplo quando o usuário muda o modo das telas externas.
+    func applySettings() {
+        synchronizeDisplays()
+    }
+
     private func synchronizeDisplays() {
         let availableScreens = NSScreen.screens.compactMap { screen -> (CGDirectDisplayID, NSScreen)? in
             guard let identifier = displayIdentifier(for: screen) else { return nil }
@@ -63,28 +68,33 @@ final class NotchWindowController {
         }
 
         for (identifier, screen) in availableScreens {
+            let kind = displayKind(for: identifier)
             let context: DisplayContext
             if let existing = displays[identifier] {
                 context = existing
             } else {
-                context = makeDisplayContext(for: screen)
+                context = makeDisplayContext(for: screen, displayKind: kind)
                 displays[identifier] = context
                 context.panel.orderFrontRegardless()
                 AppLog.window.info("Janela criada para o monitor \(identifier)")
             }
 
-            context.viewModel.updateScreenMetrics(for: screen)
+            context.viewModel.updateScreenMetrics(for: screen, displayKind: kind)
             position(context.panel, on: screen)
         }
     }
 
-    private func makeDisplayContext(for screen: NSScreen) -> DisplayContext {
+    private func makeDisplayContext(
+        for screen: NSScreen,
+        displayKind: NotchGeometry.DisplayKind
+    ) -> DisplayContext {
         let displayViewModel = NotchFlowViewModel(
             media: sharedViewModel.media,
             calendar: sharedViewModel.calendar,
-            launchAtLogin: sharedViewModel.launchAtLogin
+            launchAtLogin: sharedViewModel.launchAtLogin,
+            settings: sharedViewModel.settings
         )
-        displayViewModel.updateScreenMetrics(for: screen)
+        displayViewModel.updateScreenMetrics(for: screen, displayKind: displayKind)
 
         let panel = NotchPanel(
             contentRect: NSRect(origin: .zero, size: windowSize),
@@ -139,5 +149,9 @@ final class NotchWindowController {
         let key = NSDeviceDescriptionKey("NSScreenNumber")
         guard let number = screen.deviceDescription[key] as? NSNumber else { return nil }
         return CGDirectDisplayID(number.uint32Value)
+    }
+
+    private func displayKind(for identifier: CGDirectDisplayID) -> NotchGeometry.DisplayKind {
+        CGDisplayIsBuiltin(identifier) != 0 ? .builtIn : .external
     }
 }

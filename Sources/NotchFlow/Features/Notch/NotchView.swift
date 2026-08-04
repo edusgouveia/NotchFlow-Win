@@ -5,19 +5,17 @@ struct NotchView: View {
     @ObservedObject var viewModel: NotchFlowViewModel
     @State private var hoverTask: Task<Void, Never>?
 
-    private let notchSpring = Animation.spring(
-        response: 0.46,
-        dampingFraction: 0.82,
-        blendDuration: 0.08
-    )
+    private let actionSize: CGFloat = 22
+
+    private var geometry: NotchGeometry { viewModel.geometry }
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
                 UnevenRoundedRectangle(
                     topLeadingRadius: 0,
-                    bottomLeadingRadius: viewModel.isExpanded ? 20 : 9,
-                    bottomTrailingRadius: viewModel.isExpanded ? 20 : 9,
+                    bottomLeadingRadius: bottomRadius,
+                    bottomTrailingRadius: bottomRadius,
                     topTrailingRadius: 0,
                     style: .continuous
                 )
@@ -28,104 +26,173 @@ struct NotchView: View {
                     y: 8
                 )
 
-                if viewModel.isExpanded {
+                if viewModel.showsContent {
                     expandedContent
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity
-                                    .combined(with: .scale(scale: 0.96, anchor: .top))
-                                    .combined(with: .offset(y: -7))
-                                    .animation(.easeOut(duration: 0.2).delay(0.1)),
-                                removal: .opacity.animation(.easeOut(duration: 0.1))
-                            )
-                        )
-                } else {
-                    ClosedNotchView(media: viewModel.media)
-                        .transition(.opacity.animation(.easeIn(duration: 0.14).delay(0.08)))
+                        .transition(.opacity)
+                } else if !viewModel.isExpanded {
+                    ClosedNotchView(media: viewModel.media, style: geometry.closedStyle)
+                        .transition(.opacity)
                 }
             }
             .frame(
-                width: viewModel.isExpanded ? 584 : viewModel.closedSize.width,
-                height: viewModel.isExpanded ? 218 : viewModel.closedSize.height,
+                width: viewModel.isExpanded ? geometry.expandedSize.width : geometry.closedSize.width,
+                height: viewModel.isExpanded ? geometry.expandedSize.height : geometry.closedSize.height,
                 alignment: .top
             )
             .contentShape(Rectangle())
             .onHover(perform: handleHover)
             .onTapGesture {
                 if !viewModel.isExpanded {
-                    withAnimation(notchSpring) {
-                        viewModel.isExpanded = true
-                    }
+                    viewModel.setExpanded(true)
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if viewModel.isExpanded {
+                if viewModel.showsContent {
                     appActions
-                        .padding(.top, 8)
-                        .padding(.trailing, 11)
-                        .transition(.opacity.animation(.easeOut(duration: 0.16).delay(0.14)))
+                        .padding(.top, actionTopPadding)
+                        .padding(.trailing, 10)
+                        .transition(.opacity)
                 }
             }
-            .contextMenu {
-                Button("Recolher painel") {
-                    collapse()
-                }
-                .disabled(!viewModel.isExpanded)
-
-                Divider()
-
-                Button("Encerrar NotchFlow", role: .destructive) {
-                    quitApplication()
-                }
-            }
-            .animation(notchSpring, value: viewModel.isExpanded)
+            .contextMenu { menuItems }
+            .animation(NotchAnimation.shape, value: viewModel.isExpanded)
 
             Spacer(minLength: 0)
         }
-        .frame(width: 628, height: 252, alignment: .top)
+        .frame(
+            width: NotchGeometry.windowSize.width,
+            height: NotchGeometry.windowSize.height,
+            alignment: .top
+        )
         .preferredColorScheme(.dark)
+    }
+
+    private var bottomRadius: CGFloat {
+        viewModel.isExpanded ? geometry.expandedCornerRadius : geometry.closedCornerRadius
+    }
+
+    private var actionTopPadding: CGFloat {
+        max((geometry.expandedTopPadding - actionSize) / 2, 3)
+    }
+
+    @ViewBuilder
+    private var menuItems: some View {
+        Button("Recolher painel") {
+            collapse()
+        }
+        .disabled(!viewModel.isExpanded)
+
+        Button("Atualizar mídia e calendário") {
+            Task {
+                viewModel.media.resetBrowserDiagnostics()
+                await viewModel.media.refreshAll()
+                await viewModel.calendar.refresh()
+            }
+        }
+
+        Divider()
+
+        Toggle("Controlar mídia do navegador", isOn: browserIntegrationBinding)
+        Toggle("Mostrar ícone na barra de menus", isOn: menuBarIconBinding)
+
+        Divider()
+
+        SettingsLink {
+            Text("Ajustes…")
+        }
+
+        Divider()
+
+        Button("Encerrar NotchFlow", role: .destructive) {
+            quitApplication()
+        }
+    }
+
+    private var browserIntegrationBinding: Binding<Bool> {
+        let settings = viewModel.settings
+        let media = viewModel.media
+
+        return Binding(
+            get: { settings.browserIntegrationEnabled },
+            set: { newValue in
+                settings.browserIntegrationEnabled = newValue
+                Task { @MainActor in
+                    media.resetBrowserDiagnostics()
+                    await media.refreshAll()
+                }
+            }
+        )
+    }
+
+    private var menuBarIconBinding: Binding<Bool> {
+        let settings = viewModel.settings
+
+        return Binding(
+            get: { settings.showMenuBarIcon },
+            set: { settings.showMenuBarIcon = $0 }
+        )
     }
 
     private var appActions: some View {
         HStack(spacing: 5) {
-            Button(action: collapse) {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 10, weight: .bold))
-                    .frame(width: 24, height: 24)
-                    .background(.white.opacity(0.1), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Recolher painel")
-            .accessibilityLabel("Recolher painel")
+            actionButton(
+                symbol: "chevron.up",
+                label: "Recolher painel",
+                background: Color.white.opacity(0.1),
+                foreground: Color.white,
+                action: collapse
+            )
 
-            Button(action: quitApplication) {
-                Image(systemName: "power")
-                    .font(.system(size: 10, weight: .bold))
-                    .frame(width: 24, height: 24)
-                    .background(.red.opacity(0.18), in: Circle())
-                    .foregroundStyle(.red.opacity(0.9))
-            }
-            .buttonStyle(.plain)
-            .help("Encerrar NotchFlow")
-            .accessibilityLabel("Encerrar NotchFlow")
+            actionButton(
+                symbol: "power",
+                label: "Encerrar NotchFlow",
+                background: Color.red.opacity(0.18),
+                foreground: Color.red.opacity(0.9),
+                action: quitApplication
+            )
         }
     }
 
-    private var expandedContent: some View {
-        HStack(alignment: .top, spacing: 14) {
-            MediaPanelView(coordinator: viewModel.media)
-                .frame(width: 310)
+    private func actionButton(
+        symbol: String,
+        label: String,
+        background: Color,
+        foreground: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .bold))
+                .frame(width: actionSize, height: actionSize)
+                .background(background, in: Circle())
+                .foregroundStyle(foreground)
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
+    }
 
-            Divider()
-                .overlay(.white.opacity(0.12))
-                .padding(.vertical, 4)
+    private var expandedContent: some View {
+        HStack(alignment: .top, spacing: NotchGeometry.columnSpacing) {
+            MediaPanelView(coordinator: viewModel.media)
+                .frame(
+                    width: NotchGeometry.mediaColumnWidth,
+                    height: NotchGeometry.expandedContentHeight
+                )
+
+            Rectangle()
+                .fill(.white.opacity(0.12))
+                .frame(width: NotchGeometry.dividerWidth)
 
             CalendarPanelView(calendar: viewModel.calendar)
-                .frame(width: 214)
+                .frame(
+                    width: NotchGeometry.calendarColumnWidth,
+                    height: NotchGeometry.expandedContentHeight
+                )
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 31)
-        .padding(.bottom, 10)
+        .padding(.horizontal, NotchGeometry.horizontalPadding)
+        .padding(.top, geometry.expandedTopPadding)
+        .padding(.bottom, NotchGeometry.bottomPadding)
     }
 
     private func handleHover(_ isHovering: Bool) {
@@ -136,17 +203,13 @@ struct NotchView: View {
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
 
-            withAnimation(notchSpring) {
-                viewModel.isExpanded = isHovering
-            }
+            viewModel.setExpanded(isHovering)
         }
     }
 
     private func collapse() {
         hoverTask?.cancel()
-        withAnimation(notchSpring) {
-            viewModel.isExpanded = false
-        }
+        viewModel.setExpanded(false)
     }
 
     private func quitApplication() {
@@ -156,8 +219,18 @@ struct NotchView: View {
 
 private struct ClosedNotchView: View {
     @ObservedObject var media: MediaCoordinator
+    let style: NotchGeometry.ClosedStyle
 
     var body: some View {
+        switch style {
+        case .notch:
+            notchContent
+        case .sliver:
+            sliverContent
+        }
+    }
+
+    private var notchContent: some View {
         HStack(spacing: 6) {
             if let snapshot = media.currentSnapshot {
                 ArtworkView(snapshot: snapshot, size: 18)
@@ -169,6 +242,19 @@ private struct ClosedNotchView: View {
         }
         .padding(.horizontal, 7)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Em telas externas fica apenas uma tira, que serve de alça para abrir o painel.
+    private var sliverContent: some View {
+        Capsule()
+            .fill(indicatorColor)
+            .frame(width: 26, height: 2.5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var indicatorColor: Color {
+        guard let snapshot = media.currentSnapshot else { return .white.opacity(0.22) }
+        return snapshot.isPlaying ? .green.opacity(0.9) : .white.opacity(0.4)
     }
 }
 
@@ -183,24 +269,30 @@ struct MediaPanelView: View {
                 emptyState
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private func player(_ snapshot: PlaybackSnapshot) -> some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 13) {
-                ArtworkView(snapshot: snapshot, size: 72)
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 9) {
+                ArtworkView(snapshot: snapshot, size: 58)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Label(snapshot.source.displayName, systemImage: snapshot.source.symbolName)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(snapshot.source == .spotify ? .green : .pink)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 3) {
+                        Image(systemName: snapshot.source.symbolName)
+                            .font(.system(size: 7, weight: .bold))
+                        Text(snapshot.sourceLabel)
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(accent(for: snapshot))
 
                     Text(snapshot.title)
-                        .font(.headline)
+                        .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
 
-                    Text(snapshot.artist.isEmpty ? snapshot.album : snapshot.artist)
-                        .font(.subheadline)
+                    Text(subtitle(for: snapshot))
+                        .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -209,65 +301,100 @@ struct MediaPanelView: View {
             }
 
             TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                PlaybackProgressView(snapshot: snapshot, date: timeline.date)
+                PlaybackProgressView(snapshot: snapshot, date: timeline.date) { position in
+                    Task { await coordinator.perform(.seek(to: position)) }
+                }
             }
 
-            HStack(spacing: 12) {
-                mediaButton("gobackward.15", label: "Voltar 15 segundos") {
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                mediaButton("gobackward.15", label: "Voltar 15 segundos", enabled: snapshot.supportsSeek) {
                     await coordinator.perform(.skip(seconds: -15))
                 }
-                mediaButton("backward.fill", label: "Faixa anterior") {
+                mediaButton("backward.fill", label: "Faixa anterior", enabled: snapshot.supportsTrackSkip) {
                     await coordinator.perform(.previousTrack)
                 }
-                mediaButton(snapshot.isPlaying ? "pause.fill" : "play.fill", label: "Play ou pause", prominent: true) {
+                mediaButton(
+                    snapshot.isPlaying ? "pause.fill" : "play.fill",
+                    label: "Play ou pause",
+                    prominent: true
+                ) {
                     await coordinator.perform(.togglePlayPause)
                 }
-                mediaButton("forward.fill", label: "Próxima faixa") {
+                mediaButton("forward.fill", label: "Próxima faixa", enabled: snapshot.supportsTrackSkip) {
                     await coordinator.perform(.nextTrack)
                 }
-                mediaButton("goforward.15", label: "Avançar 15 segundos") {
+                mediaButton("goforward.15", label: "Avançar 15 segundos", enabled: snapshot.supportsSeek) {
                     await coordinator.perform(.skip(seconds: 15))
                 }
             }
+            .frame(maxWidth: .infinity)
         }
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 6) {
             Image(systemName: "music.note.list")
-                .font(.system(size: 32, weight: .light))
+                .font(.system(size: 22, weight: .light))
                 .foregroundStyle(.secondary)
+
             Text("Nada tocando")
-                .font(.headline)
-            Text("Abra o Apple Music ou o Spotify")
-                .font(.caption)
+                .font(.system(size: 12, weight: .semibold))
+
+            Text(coordinator.browserHint ?? "Abra o Apple Music, o Spotify ou um site com áudio ou vídeo.")
+                .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+
             Button("Atualizar") {
-                Task { await coordinator.refreshAll() }
+                Task {
+                    coordinator.resetBrowserDiagnostics()
+                    await coordinator.refreshAll()
+                }
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
         }
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func subtitle(for snapshot: PlaybackSnapshot) -> String {
+        if !snapshot.artist.isEmpty { return snapshot.artist }
+        if !snapshot.album.isEmpty { return snapshot.album }
+        return snapshot.source == .browser ? "Reproduzindo no navegador" : ""
+    }
+
+    private func accent(for snapshot: PlaybackSnapshot) -> Color {
+        switch snapshot.source {
+        case .spotify: .green
+        case .appleMusic: .pink
+        case .browser: .red
+        }
     }
 
     private func mediaButton(
         _ symbol: String,
         label: String,
         prominent: Bool = false,
+        enabled: Bool = true,
         action: @escaping @MainActor () async -> Void
     ) -> some View {
         Button {
             Task { await action() }
         } label: {
             Image(systemName: symbol)
-                .font(.system(size: prominent ? 17 : 13, weight: .semibold))
-                .frame(width: prominent ? 34 : 28, height: prominent ? 34 : 28)
+                .font(.system(size: prominent ? 15 : 11, weight: .semibold))
+                .frame(width: prominent ? 30 : 25, height: prominent ? 30 : 25)
                 .background(prominent ? Color.white : Color.white.opacity(0.09))
                 .foregroundStyle(prominent ? Color.black : Color.white)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.3)
         .help(label)
         .accessibilityLabel(label)
     }
@@ -287,14 +414,12 @@ private struct ArtworkView: View {
             } else {
                 ZStack {
                     LinearGradient(
-                        colors: snapshot.source == .spotify
-                            ? [.green.opacity(0.8), .black]
-                            : [.pink.opacity(0.9), .purple.opacity(0.7)],
+                        colors: gradientColors,
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     Image(systemName: snapshot.source.symbolName)
-                        .font(.system(size: size * 0.38, weight: .semibold))
+                        .font(.system(size: size * 0.34, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
@@ -302,40 +427,100 @@ private struct ArtworkView: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: max(size * 0.16, 4), style: .continuous))
     }
+
+    private var gradientColors: [Color] {
+        switch snapshot.source {
+        case .spotify: [.green.opacity(0.8), .black]
+        case .appleMusic: [.pink.opacity(0.9), .purple.opacity(0.7)]
+        case .browser: [.red.opacity(0.85), .black]
+        }
+    }
 }
 
+/// Barra de progresso arrastável. O valor arrastado tem prioridade sobre a posição lida do player
+/// até chegar uma leitura nova, evitando que o indicador pule de volta.
 private struct PlaybackProgressView: View {
     let snapshot: PlaybackSnapshot
     let date: Date
+    let onSeek: (TimeInterval) -> Void
+
+    @State private var dragProgress: Double?
+    @State private var isDragging = false
+
+    private let trackHeight: CGFloat = 3
+    private let hitAreaHeight: CGFloat = 13
+
+    private var canSeek: Bool { snapshot.supportsSeek && snapshot.duration > 0 }
 
     var body: some View {
-        let position = snapshot.effectivePosition(at: date)
-        let progress = snapshot.duration > 0 ? position / snapshot.duration : 0
+        let livePosition = snapshot.effectivePosition(at: date)
+        let liveProgress = snapshot.duration > 0 ? livePosition / snapshot.duration : 0
+        let progress = min(max(dragProgress ?? liveProgress, 0), 1)
+        let displayedPosition = dragProgress.map { $0 * snapshot.duration } ?? livePosition
 
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             GeometryReader { proxy in
+                let width = proxy.size.width
+                let knobSize: CGFloat = isDragging ? 9 : 7
+
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.14))
+                    Capsule()
+                        .fill(.white.opacity(0.14))
+                        .frame(height: trackHeight)
+
                     Capsule()
                         .fill(.white.opacity(0.85))
-                        .frame(width: proxy.size.width * min(max(progress, 0), 1))
+                        .frame(width: width * progress, height: trackHeight)
+
+                    if canSeek {
+                        Circle()
+                            .fill(.white)
+                            .frame(width: knobSize, height: knobSize)
+                            .offset(x: min(max(width * progress - knobSize / 2, 0), max(width - knobSize, 0)))
+                    }
                 }
+                .frame(width: width, height: proxy.size.height)
+                .contentShape(Rectangle())
+                .gesture(dragGesture(width: width))
             }
-            .frame(height: 4)
+            .frame(height: hitAreaHeight)
 
             HStack {
-                Text(formatTime(position))
+                Text(formatTime(displayedPosition))
                 Spacer()
                 Text(formatTime(snapshot.duration))
             }
-            .font(.caption2.monospacedDigit())
+            .font(.system(size: 8.5).monospacedDigit())
             .foregroundStyle(.secondary)
         }
+        .onChange(of: snapshot.capturedAt) { _, _ in
+            guard !isDragging else { return }
+            dragProgress = nil
+        }
+    }
+
+    private func dragGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard canSeek, width > 0 else { return }
+                isDragging = true
+                dragProgress = min(max(value.location.x / width, 0), 1)
+            }
+            .onEnded { value in
+                guard canSeek, width > 0 else { return }
+                let target = min(max(value.location.x / width, 0), 1)
+                dragProgress = target
+                isDragging = false
+                onSeek(target * snapshot.duration)
+            }
     }
 
     private func formatTime(_ seconds: TimeInterval) -> String {
         guard seconds.isFinite, seconds >= 0 else { return "0:00" }
         let total = Int(seconds)
+        if total >= 3_600 {
+            return String(format: "%d:%02d:%02d", total / 3_600, (total % 3_600) / 60, total % 60)
+        }
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 }

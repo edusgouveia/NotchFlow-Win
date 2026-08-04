@@ -10,6 +10,14 @@ protocol MusicService: AnyObject {
     func perform(_ command: PlayerCommand, currentSnapshot: PlaybackSnapshot) async throws
 }
 
+/// Serviços que precisam orientar o usuário sobre permissões ou ajustes do sistema.
+@MainActor
+protocol MusicServiceDiagnostics: AnyObject {
+    var integrationHint: String? { get }
+
+    func resetDiagnostics()
+}
+
 enum MusicServiceError: LocalizedError {
     case automationFailed(String)
     case malformedResponse(PlayerSource)

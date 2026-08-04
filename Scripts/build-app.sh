@@ -8,6 +8,7 @@ DIST_DIR="${PROJECT_DIR}/dist"
 APP_PATH="${DIST_DIR}/NotchFlow.app"
 ICON_SOURCE="${PROJECT_DIR}/Assets/AppIcon.png"
 ICON_WORK_DIR="$(mktemp -d "${TMPDIR%/}/notchflow-icon.XXXXXX")"
+SIGN_IDENTITY="${NOTCHFLOW_SIGN_IDENTITY:--}"
 ICONSET_PATH="${ICON_WORK_DIR}/NotchFlow.iconset"
 ICNS_PATH="${ICON_WORK_DIR}/NotchFlow.icns"
 
@@ -62,7 +63,7 @@ codesign \
     --deep \
     --options runtime \
     --timestamp=none \
-    --sign - \
+    --sign "${SIGN_IDENTITY}" \
     --entitlements "${PROJECT_DIR}/Configuration/NotchFlow.entitlements" \
     "${APP_PATH}"
 
@@ -70,3 +71,11 @@ codesign --verify --deep --strict --verbose=2 "${APP_PATH}"
 
 print ""
 print "Build concluído: ${APP_PATH}"
+
+if [[ "${SIGN_IDENTITY}" == "-" ]]; then
+    print ""
+    print "Assinatura ad hoc: o macOS trata cada build como um aplicativo novo e pede"
+    print "as permissões de Calendário e Automação outra vez."
+    print "Para preservar as permissões entre builds, use um certificado fixo:"
+    print "  NOTCHFLOW_SIGN_IDENTITY=\"Nome do certificado\" ./Scripts/build-app.sh"
+fi

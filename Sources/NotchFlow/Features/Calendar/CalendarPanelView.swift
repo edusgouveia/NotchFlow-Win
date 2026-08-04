@@ -4,6 +4,9 @@ struct CalendarPanelView: View {
     @ObservedObject var calendar: CalendarService
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
 
+    private static let dayCellHeight: CGFloat = 14
+    private static let dayCellSpacing: CGFloat = 1
+
     var body: some View {
         Group {
             switch calendar.accessState {
@@ -23,16 +26,17 @@ struct CalendarPanelView: View {
     }
 
     private var monthView: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             monthHeader
             weekdayHeader
             monthGrid
+            Spacer(minLength: 0)
             selectedDaySummary
         }
     }
 
     private var monthHeader: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             monthButton(symbol: "chevron.left", label: "Mês anterior") {
                 await calendar.moveMonth(by: -1)
             }
@@ -41,8 +45,9 @@ struct CalendarPanelView: View {
                 Task { await calendar.returnToCurrentMonth() }
             } label: {
                 Text(calendar.displayedMonth.formatted(.dateTime.month(.wide).year()))
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: 9.5, weight: .semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
@@ -52,37 +57,41 @@ struct CalendarPanelView: View {
                 await calendar.moveMonth(by: 1)
             }
         }
-        .frame(height: 18)
+        .frame(height: 15)
     }
 
     private var weekdayHeader: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: Self.dayCellSpacing) {
             ForEach(Array(MonthCalendarGrid.weekdaySymbols().enumerated()), id: \.offset) { _, symbol in
                 Text(symbol.uppercased())
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.system(size: 7, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
             }
         }
-        .frame(height: 10)
+        .frame(height: 8)
     }
 
     private var monthGrid: some View {
         let days = MonthCalendarGrid.days(in: calendar.displayedMonth)
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
+        let columns = Array(
+            repeating: GridItem(.flexible(), spacing: Self.dayCellSpacing),
+            count: 7
+        )
 
-        return LazyVGrid(columns: columns, spacing: 2) {
+        return LazyVGrid(columns: columns, spacing: Self.dayCellSpacing) {
             ForEach(Array(days.enumerated()), id: \.offset) { _, date in
                 if let date {
                     MonthDayButton(
                         date: date,
                         events: MonthCalendarGrid.events(on: date, from: calendar.events),
-                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate)
+                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate),
+                        height: Self.dayCellHeight
                     ) {
                         selectedDate = date
                     }
                 } else {
-                    Color.clear.frame(height: 16)
+                    Color.clear.frame(height: Self.dayCellHeight)
                 }
             }
         }
@@ -96,57 +105,61 @@ struct CalendarPanelView: View {
             Button {
                 calendar.open(event)
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     Circle()
                         .fill(color(for: event))
-                        .frame(width: 5, height: 5)
+                        .frame(width: 4, height: 4)
 
                     Text(event.isAllDay ? "Dia todo" : event.startDate.formatted(date: .omitted, time: .shortened))
-                        .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                        .font(.system(size: 8.5, weight: .semibold).monospacedDigit())
                         .foregroundStyle(.secondary)
 
                     Text(event.title)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 9.5, weight: .medium))
                         .lineLimit(1)
 
                     Spacer(minLength: 0)
 
                     if events.count > 1 {
                         Text("+\(events.count - 1)")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: 8.5, weight: .semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.horizontal, 7)
-                .frame(height: 24)
-                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
+                .padding(.horizontal, 6)
+                .frame(height: 19)
+                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help("Abrir no Calendário")
         } else {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 7, weight: .bold))
                     .foregroundStyle(.green)
                 Text("Sem eventos neste dia")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 7)
-            .frame(height: 24)
-            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 7))
+            .padding(.horizontal, 6)
+            .frame(height: 19)
+            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
         }
     }
 
     private var permissionState: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: 7) {
             Label("Calendário", systemImage: "calendar")
-                .font(.headline)
-            Text("Veja o mês e seus compromissos diretamente no notch.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .semibold))
+            Text(
+                calendar.accessWasGrantedBefore
+                    ? "O macOS pediu a permissão de novo porque o aplicativo foi assinado outra vez."
+                    : "Veja o mês e seus compromissos direto no notch."
+            )
+            .font(.system(size: 9.5))
+            .foregroundStyle(.secondary)
             Button("Permitir calendário") {
                 Task { await calendar.requestAccess() }
             }
@@ -157,11 +170,11 @@ struct CalendarPanelView: View {
     }
 
     private var deniedState: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: 7) {
             Label("Calendário", systemImage: "calendar.badge.exclamationmark")
-                .font(.headline)
+                .font(.system(size: 11, weight: .semibold))
             Text("O acesso ao calendário está desativado.")
-                .font(.caption)
+                .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
             Button("Abrir Ajustes") {
                 calendar.openSystemSettings()
@@ -181,8 +194,8 @@ struct CalendarPanelView: View {
             Task { await action() }
         } label: {
             Image(systemName: symbol)
-                .font(.system(size: 9, weight: .bold))
-                .frame(width: 18, height: 18)
+                .font(.system(size: 8, weight: .bold))
+                .frame(width: 15, height: 15)
                 .background(.white.opacity(0.07), in: Circle())
         }
         .buttonStyle(.plain)
@@ -198,38 +211,39 @@ private struct MonthDayButton: View {
     let date: Date
     let events: [CalendarEventItem]
     let isSelected: Bool
+    let height: CGFloat
     let action: () -> Void
 
     private var isToday: Bool { Calendar.current.isDateInToday(date) }
 
     var body: some View {
         Button(action: action) {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 Circle()
                     .fill(isSelected ? Color.white : Color.clear)
-                    .frame(width: 16, height: 16)
+                    .frame(width: height, height: height)
 
-                Text(date.formatted(.dateTime.day()))
-                    .font(.system(size: 9, weight: isToday || isSelected ? .bold : .regular).monospacedDigit())
-                    .foregroundStyle(isSelected ? .black : (isToday ? .green : .white))
-                    .frame(width: 16, height: 14, alignment: .top)
+                VStack(spacing: 0) {
+                    Text(date.formatted(.dateTime.day()))
+                        .font(.system(size: 8.5, weight: isToday || isSelected ? .bold : .regular).monospacedDigit())
+                        .foregroundStyle(isSelected ? .black : (isToday ? .green : .white))
+                        .frame(height: 10)
 
-                if !events.isEmpty {
                     HStack(spacing: 1) {
-                        ForEach(Array(events.prefix(3))) { event in
+                        ForEach(Array(events.prefix(3).enumerated()), id: \.offset) { _, event in
                             Circle()
                                 .fill(Color(
                                     red: event.color.red,
                                     green: event.color.green,
                                     blue: event.color.blue
                                 ))
-                                .frame(width: 2.5, height: 2.5)
+                                .frame(width: 2, height: 2)
                         }
                     }
-                    .padding(.bottom, 1)
+                    .frame(height: 3)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16)
+            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

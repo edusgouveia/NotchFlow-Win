@@ -19,15 +19,15 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.2</string>
+    <string>0.2.0</string>
     <key>CFBundleVersion</key>
-    <string>3</string>
+    <string>4</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>O NotchFlow controla a reprodução no Apple Music e no Spotify.</string>
+    <string>O NotchFlow controla a reprodução no Apple Music, no Spotify e nas abas de mídia do seu navegador.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>O NotchFlow lê seus próximos eventos para mostrá-los no notch. O aplicativo não altera seu calendário.</string>
     <key>NSCalendarsUsageDescription</key>

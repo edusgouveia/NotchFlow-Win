@@ -69,6 +69,9 @@ final class SpotifyService: MusicService {
         case .skip(let seconds):
             let target = min(max(currentSnapshot.effectivePosition() + seconds, 0), currentSnapshot.duration)
             statement = "set player position to \(target)"
+        case .seek(let position):
+            let target = min(max(position, 0), currentSnapshot.duration)
+            statement = "set player position to \(target)"
         }
 
         try AppleScriptRunner.executeVoid(

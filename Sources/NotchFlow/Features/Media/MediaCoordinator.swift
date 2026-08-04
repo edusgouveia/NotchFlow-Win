@@ -8,7 +8,11 @@ final class MediaCoordinator: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRefreshing = false
 
+    /// Orientação exibida quando a integração com o navegador precisa de uma permissão do usuário.
+    @Published private(set) var browserHint: String?
+
     private let services: [PlayerSource: any MusicService]
+    private let settings: AppSettings
     private var snapshots: [PlayerSource: PlaybackSnapshot] = [:]
     private var preferredSource: PlayerSource?
     private var observerTokens: [NSObjectProtocol] = []
@@ -16,12 +20,16 @@ final class MediaCoordinator: ObservableObject {
 
     init(
         appleMusicService: any MusicService = AppleMusicService(),
-        spotifyService: any MusicService = SpotifyService()
+        spotifyService: any MusicService = SpotifyService(),
+        browserService: any MusicService = BrowserMediaService(),
+        settings: AppSettings = .shared
     ) {
         services = [
             .appleMusic: appleMusicService,
-            .spotify: spotifyService
+            .spotify: spotifyService,
+            .browser: browserService
         ]
+        self.settings = settings
     }
 
     func start() {
@@ -68,9 +76,21 @@ final class MediaCoordinator: ObservableObject {
         defer { isRefreshing = false }
 
         for source in PlayerSource.allCases {
+            guard isEnabled(source) else {
+                snapshots.removeValue(forKey: source)
+                continue
+            }
             await refresh(source: source, markPreferred: false)
         }
+
         applySelection()
+        updateBrowserHint()
+    }
+
+    /// Reabilita as tentativas de automação depois que o usuário ajusta as permissões.
+    func resetBrowserDiagnostics() {
+        (services[.browser] as? any MusicServiceDiagnostics)?.resetDiagnostics()
+        browserHint = nil
     }
 
     func perform(_ command: PlayerCommand) async {
@@ -86,6 +106,12 @@ final class MediaCoordinator: ObservableObject {
             errorMessage = error.localizedDescription
             AppLog.media.error("Falha no comando de mídia: \(error.localizedDescription, privacy: .public)")
         }
+
+        updateBrowserHint()
+    }
+
+    private func isEnabled(_ source: PlayerSource) -> Bool {
+        source != .browser || settings.browserIntegrationEnabled
     }
 
     private func observeDistributedNotification(_ rawName: String, source: PlayerSource) {
@@ -102,7 +128,7 @@ final class MediaCoordinator: ObservableObject {
     }
 
     private func refresh(source: PlayerSource, markPreferred: Bool) async {
-        guard let service = services[source] else { return }
+        guard isEnabled(source), let service = services[source] else { return }
 
         guard service.isRunning() else {
             snapshots.removeValue(forKey: source)
@@ -133,5 +159,14 @@ final class MediaCoordinator: ObservableObject {
             from: snapshots,
             preferredSource: preferredSource
         )
+    }
+
+    private func updateBrowserHint() {
+        guard settings.browserIntegrationEnabled,
+              let diagnostics = services[.browser] as? any MusicServiceDiagnostics else {
+            browserHint = nil
+            return
+        }
+        browserHint = diagnostics.integrationHint
     }
 }

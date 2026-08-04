@@ -27,4 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func showNotch() {
         notchWindowController?.show()
     }
+
+    /// Reaplica preferências que mudam o tamanho ou a posição das ilhas.
+    func refreshLayout() {
+        notchWindowController?.applySettings()
+    }
 }

@@ -25,13 +25,19 @@ final class CalendarService: ObservableObject {
     @Published private(set) var displayedMonth: Date
 
     private let eventStore: EKEventStore
+    private let settings: AppSettings
     private var storeObserver: NSObjectProtocol?
+    private var hasRequestedAccessThisLaunch = false
 
-    init(eventStore: EKEventStore = EKEventStore()) {
+    init(eventStore: EKEventStore = EKEventStore(), settings: AppSettings = .shared) {
         self.eventStore = eventStore
+        self.settings = settings
         self.displayedMonth = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
         updateAccessState()
     }
+
+    /// O acesso já foi concedido alguma vez neste Mac. Serve para explicar um novo pedido do sistema.
+    var accessWasGrantedBefore: Bool { settings.calendarAccessGrantedOnce }
 
     func start() {
         guard storeObserver == nil else { return }
@@ -46,7 +52,10 @@ final class CalendarService: ObservableObject {
             }
         }
 
-        Task { await refresh() }
+        Task {
+            await requestAccessIfNeeded()
+            await refresh()
+        }
     }
 
     func stop() {
@@ -56,10 +65,21 @@ final class CalendarService: ObservableObject {
         }
     }
 
+    /// Pede a permissão uma única vez por sessão, sem exigir um clique no painel.
+    private func requestAccessIfNeeded() async {
+        updateAccessState()
+        guard accessState == .notDetermined, !hasRequestedAccessThisLaunch else { return }
+        hasRequestedAccessThisLaunch = true
+        await requestAccess()
+    }
+
     func requestAccess() async {
         do {
             let granted = try await eventStore.requestFullAccessToEvents()
             accessState = granted ? .authorized : .denied
+            if granted {
+                settings.calendarAccessGrantedOnce = true
+            }
             if granted {
                 eventStore.reset()
                 await refresh()
@@ -139,6 +159,9 @@ final class CalendarService: ObservableObject {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess, .authorized:
             accessState = .authorized
+            if !settings.calendarAccessGrantedOnce {
+                settings.calendarAccessGrantedOnce = true
+            }
         case .notDetermined:
             accessState = .notDetermined
         case .denied, .restricted, .writeOnly:

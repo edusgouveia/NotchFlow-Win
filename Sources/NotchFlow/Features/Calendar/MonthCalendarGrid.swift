@@ -16,8 +16,11 @@ enum MonthCalendarGrid {
             calendar.date(byAdding: .day, value: day - 1, to: firstDay)
         })
 
-        let visibleCellCount = max(35, Int(ceil(Double(result.count) / 7.0)) * 7)
-        result.append(contentsOf: Array(repeating: nil, count: visibleCellCount - result.count))
+        // A grade sempre usa seis semanas para que a altura do painel não mude entre meses.
+        let visibleCellCount = 42
+        if result.count < visibleCellCount {
+            result.append(contentsOf: Array(repeating: nil, count: visibleCellCount - result.count))
+        }
         return result
     }
 
