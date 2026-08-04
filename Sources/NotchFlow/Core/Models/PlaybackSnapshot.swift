@@ -30,6 +30,13 @@ enum PlaybackStatus: String, Sendable {
     case stopped
 }
 
+enum PlaybackBrand: Equatable, Sendable {
+    case appleMusic
+    case spotify
+    case youtube
+    case neutral
+}
+
 struct PlaybackSnapshot: Equatable, Sendable {
     let source: PlayerSource
     var status: PlaybackStatus
@@ -56,6 +63,17 @@ struct PlaybackSnapshot: Equatable, Sendable {
     var sourceLabel: String {
         guard let sourceDetail, !sourceDetail.isEmpty else { return source.displayName }
         return sourceDetail
+    }
+
+    var playbackBrand: PlaybackBrand {
+        switch source {
+        case .appleMusic:
+            .appleMusic
+        case .spotify:
+            .spotify
+        case .browser:
+            sourceLabel.localizedCaseInsensitiveContains("youtube") ? .youtube : .neutral
+        }
     }
 
     func effectivePosition(at date: Date = Date()) -> TimeInterval {

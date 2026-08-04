@@ -40,7 +40,7 @@ final class LaunchAtLoginService: ObservableObject {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
-            AppLog.lifecycle.error("Falha ao alterar início automático: \(error.localizedDescription, privacy: .public)")
+            AppLog.lifecycle.error("Falha ao alterar início automático")
         }
 
         refreshStatus()

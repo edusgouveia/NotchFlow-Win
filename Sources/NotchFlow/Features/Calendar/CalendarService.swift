@@ -87,7 +87,7 @@ final class CalendarService: ObservableObject {
         } catch {
             accessState = .denied
             errorMessage = error.localizedDescription
-            AppLog.calendar.error("Falha ao solicitar calendário: \(error.localizedDescription, privacy: .public)")
+            AppLog.calendar.error("Falha ao solicitar acesso ao calendário")
         }
     }
 

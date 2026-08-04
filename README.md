@@ -23,6 +23,17 @@ O NotchFlow transforma a área do notch em um painel discreto para controlar o *
 
 O painel fica recolhido no topo, abre com uma animação ao aproximar o cursor e funciona de forma independente em todos os monitores conectados. Na tela do Mac ele imita o notch; nos monitores externos fica apenas uma tira fina, que abre o painel ao passar o mouse.
 
+## Novidades da versão 0.2.0
+
+- painel em todos os monitores, com tira compacta nas telas externas;
+- animação de abertura e fechamento mais rápida e suave;
+- indicador recolhido por fonte: Spotify verde, YouTube vermelho, Apple Music laranja e estado neutro cinza;
+- reprodução de Apple Music, Spotify e mídia do navegador, incluindo YouTube;
+- calendário mensal completo com eventos do dia selecionado;
+- tela **Sobre o NotchFlow**, com autoria e acesso direto ao repositório;
+- ícone opcional na barra de menus implementado com o componente nativo do macOS;
+- verificações reforçadas para downloads de capas, logs, arquivos sensíveis e configurações de release.
+
 ## O que já está disponível
 
 | Área | Funcionalidades |
@@ -33,7 +44,7 @@ O painel fica recolhido no topo, abre com uma animação ao aproximar o cursor e
 | Calendário | Mês completo, navegação entre meses, marcações nos dias com eventos e resumo do dia selecionado. |
 | Monitores | Ilha completa na tela do Mac e tira discreta nas telas externas, com painel independente em cada uma. |
 | Controles | Barra de progresso arrastável, além dos saltos de 15 segundos. |
-| Sistema | Aplicativo acessório, sem ícone no Dock e sem ícone na barra de menus por padrão, com opção de iniciar junto com o Mac. Todas as opções ficam no menu de contexto da ilha. |
+| Sistema | Aplicativo acessório, sem ícone no Dock e sem ícone na barra de menus por padrão, com opção de iniciar junto com o Mac. A ilha oferece menu de contexto, encerramento e tela sobre o projeto. |
 
 ## Download e instalação
 
@@ -67,8 +78,9 @@ O NotchFlow não possui servidor, conta, banco de dados ou telemetria.
 - eventos são lidos diretamente do EventKit e permanecem na memória do Mac;
 - títulos de músicas e controles são obtidos por Apple Events;
 - nenhuma informação de calendário ou reprodução é enviada pelo NotchFlow;
-- a única requisição de rede do aplicativo baixa, por HTTPS, a capa fornecida pelo Spotify ou pelo site aberto no navegador;
-- capas remotas são limitadas a imagens de até 8 MB e não são salvas em disco.
+- as únicas requisições de rede do aplicativo baixam, por HTTPS, capas fornecidas pelo Spotify ou pelo site de mídia aberto no navegador;
+- capas remotas são interrompidas ao atingir 8 MB, aceitam apenas formatos de imagem permitidos e não são salvas em disco;
+- endereços locais, redes privadas e redirecionamentos para HTTP são recusados no carregamento de capas.
 
 Consulte [PRIVACY.md](PRIVACY.md) para a descrição completa e [SECURITY.md](SECURITY.md) para relatar uma vulnerabilidade.
 
@@ -77,7 +89,7 @@ Consulte [PRIVACY.md](PRIVACY.md) para a descrição completa e [SECURITY.md](SE
 | Permissão | Motivo | O que o app não faz |
 | --- | --- | --- |
 | Calendário | Exibir os eventos do mês. | Não cria, altera ou exclui eventos. |
-| Automação | Ler e controlar Apple Music, Spotify e a aba de mídia do navegador. | Não executa comandos fornecidos pelo usuário, não lê o conteúdo das outras abas e não altera páginas. |
+| Automação | Ler e controlar Apple Music, Spotify e a aba de mídia do navegador. | Consulta localmente URLs para encontrar serviços compatíveis, não executa comandos fornecidos pelo usuário e não envia conteúdo das abas. |
 | Item de início | Abrir o próprio aplicativo após o login. | Não instala daemon ou serviço privilegiado. |
 
 ## Desenvolvimento
@@ -106,11 +118,10 @@ swift run NotchFlow
 ### Gerar o aplicativo
 
 ```bash
-./Scripts/security-check.sh
 ./Scripts/build-app.sh
 ```
 
-O pacote será criado em `dist/NotchFlow.app` com ícone, `Info.plist`, permissões mínimas declaradas, hardened runtime e assinatura local ad hoc.
+O build executa automaticamente a auditoria e os testes. O pacote será criado em `dist/NotchFlow.app` com ícone, `Info.plist`, permissões mínimas declaradas, hardened runtime e assinatura local ad hoc.
 
 ## Arquitetura
 
@@ -154,4 +165,4 @@ O NotchFlow está em desenvolvimento inicial. Use a seção de [Issues](https://
 
 ## Licença
 
-Copyright © 2026 Thiago Alves. Todos os direitos reservados. Consulte [LICENSE](LICENSE).
+Copyright © 2026 Thiago Alves. O código está disponível para visualização e auditoria, mas não é open source enquanto permanecer sob a licença atual de direitos reservados. Consulte [LICENSE](LICENSE).

@@ -225,20 +225,13 @@ final class BrowserMediaService: MusicService, MusicServiceDiagnostics {
         }
 
         do {
-            var request = URLRequest(url: url)
-            request.cachePolicy = .returnCacheDataElseLoad
-            request.timeoutInterval = 10
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard ArtworkDownloadPolicy.allows(response: response, byteCount: data.count) else {
-                return nil
-            }
+            guard let data = try await ArtworkDownloader.download(from: url) else { return nil }
 
             cachedArtworkURL = url
             cachedArtworkData = data
             return data
         } catch {
-            AppLog.media.error("Falha ao carregar capa do navegador: \(error.localizedDescription, privacy: .public)")
+            AppLog.media.error("Falha ao carregar capa do navegador")
             return nil
         }
     }
@@ -258,9 +251,7 @@ final class BrowserMediaService: MusicService, MusicServiceDiagnostics {
 
         guard !error.isApplicationUnavailable else { return }
 
-        AppLog.media.error(
-            "Falha no navegador \(browser.displayName, privacy: .public): \(error.message, privacy: .public)"
-        )
+        AppLog.media.error("Falha no navegador \(browser.displayName, privacy: .public), código \(error.code)")
     }
 
     private func register(errorMessages: [String], for browser: BrowserApplication) {
@@ -271,7 +262,7 @@ final class BrowserMediaService: MusicService, MusicServiceDiagnostics {
             return
         }
 
-        AppLog.media.error("Aba recusou a leitura: \(message, privacy: .public)")
+        AppLog.media.error("Uma aba recusou a leitura no \(browser.displayName, privacy: .public)")
     }
 
     private func javaScriptHint(for browser: BrowserApplication) -> String {

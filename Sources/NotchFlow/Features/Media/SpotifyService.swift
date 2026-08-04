@@ -103,20 +103,13 @@ final class SpotifyService: MusicService {
         }
 
         do {
-            var request = URLRequest(url: url)
-            request.cachePolicy = .returnCacheDataElseLoad
-            request.timeoutInterval = 10
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard ArtworkDownloadPolicy.allows(response: response, byteCount: data.count) else {
-                return nil
-            }
+            guard let data = try await ArtworkDownloader.download(from: url) else { return nil }
 
             cachedArtworkURL = url
             cachedArtworkData = data
             return data
         } catch {
-            AppLog.media.error("Falha ao carregar capa do Spotify: \(error.localizedDescription, privacy: .public)")
+            AppLog.media.error("Falha ao carregar capa do Spotify")
             return nil
         }
     }

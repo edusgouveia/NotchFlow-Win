@@ -16,6 +16,10 @@ struct NotchGeometryTests {
         #expect(geometry.closedStyle == .sliver)
         #expect(geometry.closedSize == NotchGeometry.sliverSize)
         #expect(geometry.isMinimized)
+        #expect(geometry.closedInteractionSize.width >= 180)
+        #expect(geometry.closedInteractionSize.height >= 24)
+        #expect(geometry.closedInteractionSize.width > geometry.closedSize.width)
+        #expect(geometry.closedInteractionSize.height > geometry.closedSize.height)
     }
 
     @Test("Tela externa pode manter a ilha inteira")
@@ -29,6 +33,7 @@ struct NotchGeometryTests {
 
         #expect(geometry.closedStyle == .notch)
         #expect(geometry.closedSize.width == 156)
+        #expect(geometry.closedInteractionSize == geometry.closedSize)
         #expect(geometry.isMinimized == false)
     }
 
@@ -60,6 +65,18 @@ struct NotchGeometryTests {
             #expect(geometry.expandedSize.width <= NotchGeometry.windowSize.width)
             #expect(geometry.expandedSize.height <= NotchGeometry.windowSize.height)
         }
+    }
+
+    @Test("A área de interação fica centralizada no topo da janela")
+    func interactionAreaIsTopCentered() {
+        let windowFrame = CGRect(x: 100, y: 200, width: 520, height: 224)
+        let interactionSize = CGSize(width: 180, height: 24)
+
+        let rect = NotchGeometry.interactionRect(in: windowFrame, size: interactionSize)
+
+        #expect(rect == CGRect(x: 270, y: 400, width: 180, height: 24))
+        #expect(rect.midX == windowFrame.midX)
+        #expect(rect.maxY == windowFrame.maxY)
     }
 
     @Test("O painel novo é mais compacto que o anterior")

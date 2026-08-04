@@ -19,6 +19,7 @@ trap cleanup EXIT
 
 cd "${PROJECT_DIR}"
 
+"${PROJECT_DIR}/Scripts/security-check.sh"
 swift test
 BUILD_ARCH="${NOTCHFLOW_BUILD_ARCH:-$(uname -m)}"
 swift build -c release --arch "${BUILD_ARCH}"

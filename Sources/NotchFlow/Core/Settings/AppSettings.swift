@@ -15,6 +15,10 @@ final class AppSettings: ObservableObject {
 
     private let defaults: UserDefaults
 
+    /// Usado pelo AppDelegate para mostrar ou remover o NSStatusItem nativo sem
+    /// reconstruir as cenas do SwiftUI.
+    var showMenuBarIconDidChange: ((Bool) -> Void)?
+
     @Published var browserIntegrationEnabled: Bool {
         didSet { defaults.set(browserIntegrationEnabled, forKey: Key.browserIntegration) }
     }
@@ -25,7 +29,10 @@ final class AppSettings: ObservableObject {
 
     /// O ícone da barra de menus fica desligado por padrão: a própria ilha traz o menu de contexto.
     @Published var showMenuBarIcon: Bool {
-        didSet { defaults.set(showMenuBarIcon, forKey: Key.showMenuBarIcon) }
+        didSet {
+            defaults.set(showMenuBarIcon, forKey: Key.showMenuBarIcon)
+            showMenuBarIconDidChange?(showMenuBarIcon)
+        }
     }
 
     /// Registra que o calendário já foi autorizado alguma vez, para explicar quando o macOS pede de novo.

@@ -9,6 +9,9 @@ struct ArtworkDownloadPolicyTests {
         #expect(ArtworkDownloadPolicy.allows(try #require(URL(string: "https://image.example/cover.jpg"))))
         #expect(!ArtworkDownloadPolicy.allows(try #require(URL(string: "http://image.example/cover.jpg"))))
         #expect(!ArtworkDownloadPolicy.allows(try #require(URL(string: "file:///tmp/cover.jpg"))))
+        #expect(!ArtworkDownloadPolicy.allows(try #require(URL(string: "https://localhost/cover.jpg"))))
+        #expect(!ArtworkDownloadPolicy.allows(try #require(URL(string: "https://127.0.0.1/cover.jpg"))))
+        #expect(!ArtworkDownloadPolicy.allows(try #require(URL(string: "https://192.168.1.10/cover.jpg"))))
     }
 
     @Test("Responses must be images within the size limit")
@@ -26,9 +29,24 @@ struct ArtworkDownloadPolicyTests {
             httpVersion: nil,
             headerFields: ["Content-Type": "text/html"]
         ))
+        let svgResponse = try #require(HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "image/svg+xml"]
+        ))
+        let insecureURL = try #require(URL(string: "http://image.example/cover.jpg"))
+        let redirectedToHTTP = try #require(HTTPURLResponse(
+            url: insecureURL,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "image/jpeg"]
+        ))
 
         #expect(ArtworkDownloadPolicy.allows(response: imageResponse, byteCount: 1_024))
         #expect(!ArtworkDownloadPolicy.allows(response: textResponse, byteCount: 1_024))
+        #expect(!ArtworkDownloadPolicy.allows(response: svgResponse, byteCount: 1_024))
+        #expect(!ArtworkDownloadPolicy.allows(response: redirectedToHTTP, byteCount: 1_024))
         #expect(!ArtworkDownloadPolicy.allows(
             response: imageResponse,
             byteCount: ArtworkDownloadPolicy.maximumByteCount + 1

@@ -25,6 +25,9 @@ struct NotchGeometry: Equatable, Sendable {
     static let bottomPadding: CGFloat = 9
     static let dividerWidth: CGFloat = 1
     static let sliverSize = CGSize(width: 132, height: 9)
+    /// Área mínima de interação da tira. O visual continua fino, mas hover e clique
+    /// precisam de uma região confortável para funcionar no limite superior da tela.
+    static let sliverInteractionSize = CGSize(width: 180, height: 24)
     static let externalTopPadding: CGFloat = 26
 
     let displayKind: DisplayKind
@@ -53,6 +56,25 @@ struct NotchGeometry: Equatable, Sendable {
     var expandedCornerRadius: CGFloat { 18 }
 
     var isMinimized: Bool { closedStyle == .sliver }
+
+    var closedInteractionSize: CGSize {
+        guard isMinimized else { return closedSize }
+        return CGSize(
+            width: max(closedSize.width, Self.sliverInteractionSize.width),
+            height: max(closedSize.height, Self.sliverInteractionSize.height)
+        )
+    }
+
+    /// Região global usada para detectar o ponteiro. A ilha sempre nasce centralizada
+    /// no topo da janela transparente, independentemente do monitor.
+    static func interactionRect(in windowFrame: CGRect, size: CGSize) -> CGRect {
+        CGRect(
+            x: windowFrame.midX - size.width / 2,
+            y: windowFrame.maxY - size.height,
+            width: size.width,
+            height: size.height
+        )
+    }
 
     static func make(
         displayKind: DisplayKind,

@@ -104,7 +104,7 @@ final class MediaCoordinator: ObservableObject {
             await refresh(source: snapshot.source, markPreferred: true)
         } catch {
             errorMessage = error.localizedDescription
-            AppLog.media.error("Falha no comando de mídia: \(error.localizedDescription, privacy: .public)")
+            AppLog.media.error("Falha no comando de mídia para \(snapshot.source.displayName, privacy: .public)")
         }
 
         updateBrowserHint()
@@ -148,7 +148,7 @@ final class MediaCoordinator: ObservableObject {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
-            AppLog.media.error("Falha ao consultar \(source.displayName, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            AppLog.media.error("Falha ao consultar \(source.displayName, privacy: .public)")
         }
 
         applySelection()

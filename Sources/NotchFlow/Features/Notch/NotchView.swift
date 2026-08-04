@@ -3,44 +3,52 @@ import SwiftUI
 
 struct NotchView: View {
     @ObservedObject var viewModel: NotchFlowViewModel
-    @State private var hoverTask: Task<Void, Never>?
+    @State private var showsAbout = false
 
     private let actionSize: CGFloat = 22
 
     private var geometry: NotchGeometry { viewModel.geometry }
 
+    private var visualSize: CGSize {
+        viewModel.isExpanded ? geometry.expandedSize : geometry.closedSize
+    }
+
+    private var interactionSize: CGSize {
+        viewModel.isExpanded ? geometry.expandedSize : geometry.closedInteractionSize
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 0,
-                    bottomLeadingRadius: bottomRadius,
-                    bottomTrailingRadius: bottomRadius,
-                    topTrailingRadius: 0,
-                    style: .continuous
-                )
-                .fill(.black)
-                .shadow(
-                    color: viewModel.isExpanded ? .black.opacity(0.48) : .clear,
-                    radius: 14,
-                    y: 8
-                )
+                ZStack(alignment: .top) {
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 0,
+                        bottomLeadingRadius: bottomRadius,
+                        bottomTrailingRadius: bottomRadius,
+                        topTrailingRadius: 0,
+                        style: .continuous
+                    )
+                    .fill(.black)
+                    .shadow(
+                        color: viewModel.isExpanded ? .black.opacity(0.48) : .clear,
+                        radius: 14,
+                        y: 8
+                    )
 
-                if viewModel.showsContent {
-                    expandedContent
-                        .transition(.opacity)
-                } else if !viewModel.isExpanded {
-                    ClosedNotchView(media: viewModel.media, style: geometry.closedStyle)
-                        .transition(.opacity)
+                    if viewModel.showsContent {
+                        expandedContent
+                            .transition(.opacity)
+                    } else if !viewModel.isExpanded {
+                        ClosedNotchView(media: viewModel.media, style: geometry.closedStyle)
+                            .transition(.opacity)
+                    }
                 }
+                .frame(width: visualSize.width, height: visualSize.height, alignment: .top)
             }
-            .frame(
-                width: viewModel.isExpanded ? geometry.expandedSize.width : geometry.closedSize.width,
-                height: viewModel.isExpanded ? geometry.expandedSize.height : geometry.closedSize.height,
-                alignment: .top
-            )
+            .frame(width: interactionSize.width, height: interactionSize.height, alignment: .top)
+            // Uma opacidade quase nula garante hit testing também na parte invisível da área.
+            .background(Color.black.opacity(0.001))
             .contentShape(Rectangle())
-            .onHover(perform: handleHover)
             .onTapGesture {
                 if !viewModel.isExpanded {
                     viewModel.setExpanded(true)
@@ -56,6 +64,11 @@ struct NotchView: View {
             }
             .contextMenu { menuItems }
             .animation(NotchAnimation.shape, value: viewModel.isExpanded)
+            .onChange(of: viewModel.isExpanded) { _, isExpanded in
+                if !isExpanded {
+                    showsAbout = false
+                }
+            }
 
             Spacer(minLength: 0)
         }
@@ -136,6 +149,14 @@ struct NotchView: View {
     private var appActions: some View {
         HStack(spacing: 5) {
             actionButton(
+                symbol: showsAbout ? "info.circle.fill" : "info.circle",
+                label: "Sobre o NotchFlow",
+                background: showsAbout ? Color.gray.opacity(0.34) : Color.white.opacity(0.1),
+                foreground: Color.white,
+                action: { showsAbout.toggle() }
+            )
+
+            actionButton(
                 symbol: "chevron.up",
                 label: "Recolher painel",
                 background: Color.white.opacity(0.1),
@@ -173,42 +194,41 @@ struct NotchView: View {
     }
 
     private var expandedContent: some View {
-        HStack(alignment: .top, spacing: NotchGeometry.columnSpacing) {
-            MediaPanelView(coordinator: viewModel.media)
-                .frame(
-                    width: NotchGeometry.mediaColumnWidth,
-                    height: NotchGeometry.expandedContentHeight
-                )
+        Group {
+            if showsAbout {
+                AboutPanelView {
+                    showsAbout = false
+                }
+                .frame(height: NotchGeometry.expandedContentHeight)
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            } else {
+                HStack(alignment: .top, spacing: NotchGeometry.columnSpacing) {
+                    MediaPanelView(coordinator: viewModel.media)
+                        .frame(
+                            width: NotchGeometry.mediaColumnWidth,
+                            height: NotchGeometry.expandedContentHeight
+                        )
 
-            Rectangle()
-                .fill(.white.opacity(0.12))
-                .frame(width: NotchGeometry.dividerWidth)
+                    Rectangle()
+                        .fill(.white.opacity(0.12))
+                        .frame(width: NotchGeometry.dividerWidth)
 
-            CalendarPanelView(calendar: viewModel.calendar)
-                .frame(
-                    width: NotchGeometry.calendarColumnWidth,
-                    height: NotchGeometry.expandedContentHeight
-                )
+                    CalendarPanelView(calendar: viewModel.calendar)
+                        .frame(
+                            width: NotchGeometry.calendarColumnWidth,
+                            height: NotchGeometry.expandedContentHeight
+                        )
+                }
+                .transition(.opacity)
+            }
         }
         .padding(.horizontal, NotchGeometry.horizontalPadding)
         .padding(.top, geometry.expandedTopPadding)
         .padding(.bottom, NotchGeometry.bottomPadding)
-    }
-
-    private func handleHover(_ isHovering: Bool) {
-        hoverTask?.cancel()
-
-        hoverTask = Task { @MainActor in
-            let delay: Duration = isHovering ? .milliseconds(120) : .milliseconds(480)
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-
-            viewModel.setExpanded(isHovering)
-        }
+        .animation(.easeInOut(duration: 0.16), value: showsAbout)
     }
 
     private func collapse() {
-        hoverTask?.cancel()
         viewModel.setExpanded(false)
     }
 
@@ -237,7 +257,7 @@ private struct ClosedNotchView: View {
                 Spacer(minLength: 8)
                 Image(systemName: snapshot.isPlaying ? "waveform" : "pause.fill")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(snapshot.isPlaying ? .green : .white.opacity(0.65))
+                    .foregroundStyle(sourceColor(for: snapshot))
             }
         }
         .padding(.horizontal, 7)
@@ -253,8 +273,21 @@ private struct ClosedNotchView: View {
     }
 
     private var indicatorColor: Color {
-        guard let snapshot = media.currentSnapshot else { return .white.opacity(0.22) }
-        return snapshot.isPlaying ? .green.opacity(0.9) : .white.opacity(0.4)
+        guard let snapshot = media.currentSnapshot else { return .gray.opacity(0.62) }
+        return sourceColor(for: snapshot)
+    }
+
+    private func sourceColor(for snapshot: PlaybackSnapshot) -> Color {
+        switch snapshot.playbackBrand {
+        case .spotify:
+            Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .youtube:
+            Color(red: 1, green: 0.16, blue: 0.14)
+        case .appleMusic:
+            Color(red: 1, green: 0.48, blue: 0.12)
+        case .neutral:
+            Color.gray.opacity(0.72)
+        }
     }
 }
 
@@ -431,7 +464,7 @@ private struct ArtworkView: View {
     private var gradientColors: [Color] {
         switch snapshot.source {
         case .spotify: [.green.opacity(0.8), .black]
-        case .appleMusic: [.pink.opacity(0.9), .purple.opacity(0.7)]
+        case .appleMusic: [.orange.opacity(0.92), .red.opacity(0.68)]
         case .browser: [.red.opacity(0.85), .black]
         }
     }

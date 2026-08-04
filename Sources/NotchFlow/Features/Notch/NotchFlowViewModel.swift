@@ -4,15 +4,15 @@ import SwiftUI
 
 /// Tempos usados na abertura e no fechamento da ilha.
 enum NotchAnimation {
-    static let shape = Animation.spring(response: 0.42, dampingFraction: 0.84, blendDuration: 0.08)
-    static let contentIn = Animation.easeOut(duration: 0.16)
-    static let contentOut = Animation.easeIn(duration: 0.09)
+    static let shape = Animation.smooth(duration: 0.28, extraBounce: 0)
+    static let contentIn = Animation.easeOut(duration: 0.12)
+    static let contentOut = Animation.easeIn(duration: 0.07)
 
     /// Espera até a forma estar praticamente aberta antes de mostrar o conteúdo.
-    static let contentInDelay: Duration = .milliseconds(190)
+    static let contentInDelay: Duration = .milliseconds(110)
 
     /// Deixa o conteúdo desaparecer antes de a forma voltar ao tamanho fechado.
-    static let shapeCloseDelay: Duration = .milliseconds(110)
+    static let shapeCloseDelay: Duration = .milliseconds(70)
 }
 
 @MainActor

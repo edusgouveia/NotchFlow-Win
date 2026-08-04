@@ -2,14 +2,35 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class NotchWindowController {
+final class NotchWindowController: NSObject {
+    @MainActor
     private final class DisplayContext {
         let panel: NotchPanel
         let viewModel: NotchFlowViewModel
+        private var pointerTask: Task<Void, Never>?
+        private var isPointerInside = false
 
         init(panel: NotchPanel, viewModel: NotchFlowViewModel) {
             self.panel = panel
             self.viewModel = viewModel
+        }
+
+        func updatePointerState(_ isInside: Bool) {
+            guard isInside != isPointerInside else { return }
+
+            isPointerInside = isInside
+            pointerTask?.cancel()
+            pointerTask = Task { @MainActor [weak self] in
+                let delay: Duration = isInside ? .milliseconds(55) : .milliseconds(300)
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled, let self, self.isPointerInside == isInside else { return }
+                self.viewModel.setExpanded(isInside)
+            }
+        }
+
+        func stopPointerTracking() {
+            pointerTask?.cancel()
+            pointerTask = nil
         }
     }
 
@@ -17,10 +38,13 @@ final class NotchWindowController {
     private let sharedViewModel: NotchFlowViewModel
     private var displays: [CGDirectDisplayID: DisplayContext] = [:]
     private var screenObserver: NSObjectProtocol?
+    private var pointerMonitorTimer: Timer?
 
     init(viewModel: NotchFlowViewModel) {
         sharedViewModel = viewModel
+        super.init()
         synchronizeDisplays()
+        startPointerTracking()
 
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -53,6 +77,18 @@ final class NotchWindowController {
         synchronizeDisplays()
     }
 
+    func stop() {
+        pointerMonitorTimer?.invalidate()
+        pointerMonitorTimer = nil
+
+        if let screenObserver {
+            NotificationCenter.default.removeObserver(screenObserver)
+            self.screenObserver = nil
+        }
+
+        displays.values.forEach { $0.stopPointerTracking() }
+    }
+
     private func synchronizeDisplays() {
         let availableScreens = NSScreen.screens.compactMap { screen -> (CGDirectDisplayID, NSScreen)? in
             guard let identifier = displayIdentifier(for: screen) else { return nil }
@@ -62,6 +98,7 @@ final class NotchWindowController {
 
         for identifier in Array(displays.keys) where !availableIdentifiers.contains(identifier) {
             guard let removed = displays.removeValue(forKey: identifier) else { continue }
+            removed.stopPointerTracking()
             removed.panel.orderOut(nil)
             removed.panel.close()
             AppLog.window.info("Janela removida do monitor \(identifier)")
@@ -124,6 +161,45 @@ final class NotchWindowController {
             .stationary,
             .ignoresCycle
         ]
+    }
+
+    /// O painel é transparente e não ativa o aplicativo. Nessas condições o `onHover`
+    /// do SwiftUI pode não receber eventos em algumas combinações de monitor e macOS.
+    /// Consultar a posição global do ponteiro evita permissões extras e funciona em
+    /// qualquer tela, inclusive quando outro aplicativo está em primeiro plano.
+    private func startPointerTracking() {
+        pointerMonitorTimer?.invalidate()
+        AppLog.window.info("Monitor nativo do ponteiro iniciado")
+        let timer = Timer(
+            timeInterval: 0.06,
+            target: self,
+            selector: #selector(handlePointerTimer(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+        RunLoop.main.add(timer, forMode: .common)
+        pointerMonitorTimer = timer
+    }
+
+    @objc
+    private func handlePointerTimer(_ timer: Timer) {
+        updatePointerInteractions()
+    }
+
+    private func updatePointerInteractions() {
+        let pointerLocation = NSEvent.mouseLocation
+
+        for context in displays.values {
+            let geometry = context.viewModel.geometry
+            let interactionSize = context.viewModel.isExpanded
+                ? geometry.expandedSize
+                : geometry.closedInteractionSize
+            let interactionRect = NotchGeometry.interactionRect(
+                in: context.panel.frame,
+                size: interactionSize
+            )
+            context.updatePointerState(interactionRect.contains(pointerLocation))
+        }
     }
 
     private func position(_ panel: NSPanel, on screen: NSScreen) {
