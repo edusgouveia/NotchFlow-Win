@@ -1,0 +1,52 @@
+<Application
+    x:Class="NotchFlow.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Botão redondo dos controles de mídia. -->
+            <Style x:Key="MediaButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="25" />
+                <Setter Property="Height" Value="25" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="12.5" />
+                <Setter Property="Background" Value="#17FFFFFF" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+
+            <!-- Botão principal de play e pause, em destaque. -->
+            <Style x:Key="ProminentMediaButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="30" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="15" />
+                <Setter Property="Background" Value="White" />
+                <Setter Property="Foreground" Value="Black" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+
+            <!-- Ações da própria ilha, no canto superior direito do painel. -->
+            <Style x:Key="IslandActionStyle" TargetType="Button">
+                <Setter Property="Width" Value="22" />
+                <Setter Property="Height" Value="22" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="11" />
+                <Setter Property="Background" Value="#1AFFFFFF" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

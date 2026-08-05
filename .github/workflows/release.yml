@@ -17,6 +17,11 @@ jobs:
     runs-on: macos-latest
     env:
       NOTCHFLOW_BUILD_ARCH: arm64
+    defaults:
+      run:
+        # O projeto Swift passou a viver em macos/ quando as duas implementações
+        # foram separadas. Este workflow ainda publica a build do macOS.
+        working-directory: macos
 
     steps:
       - name: Checkout

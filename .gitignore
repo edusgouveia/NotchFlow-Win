@@ -1,11 +1,23 @@
+# .NET / WinUI
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Swift (versão macOS, mantida como referência)
 .DS_Store
 .build/
 .swiftpm/
 DerivedData/
+
+# Saída de empacotamento das duas implementações
 dist/
 *.xcuserstate
 xcuserdata/
-*.app/
+# Nao usar "*.app/" para os bundles do macOS: no Windows o git compara caminhos sem
+# diferenciar maiusculas, e a regra engole a pasta windows/src/NotchFlow.App/ inteira.
+# Os bundles ja sao cobertos por dist/, que e onde o build-app.sh os monta.
 *.dmg
 *.zip
 *.p12

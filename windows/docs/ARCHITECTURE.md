@@ -1,0 +1,152 @@
+# Arquitetura do NotchFlow para Windows
+
+Este documento descreve a versão Windows. A implementação original em Swift continua no
+repositório, em `macos/`, e serve de especificação viva: os nomes dos componentes, os
+tempos de animação e as constantes de geometria foram preservados.
+
+Para a arquitetura da versão macOS, veja [macos/docs/ARCHITECTURE.md](../../macos/docs/ARCHITECTURE.md).
+
+## Objetivos
+
+Os mesmos da versão macOS: interface pequena, integração nativa, nenhuma infraestrutura
+externa e separação clara entre apresentação, estado e serviços do sistema.
+
+## Projetos
+
+| Projeto | Responsabilidade |
+| --- | --- |
+| `NotchFlow.Core` | Modelos, seleção de fonte, catálogo e acesso ao SMTC. Sem dependência de XAML, o que o torna testável. |
+| `NotchFlow.App` | Aplicativo WinUI 3: janelas, interop Win32, bandeja e início automático. |
+| `NotchFlow.Core.Tests` | Testes de unidade da lógica pura. |
+
+## Componentes
+
+| Componente | Responsabilidade |
+| --- | --- |
+| `App` | Sobe os serviços compartilhados e monta o menu da bandeja. Equivale ao `AppDelegate`. |
+| `NotchWindowController` | Cria, posiciona e remove uma ilha por monitor, e rastreia o ponteiro. |
+| `NotchWindow` | Uma ilha: desenho, recorte da silhueta e comandos de mídia. |
+| `NotchViewModel` | Estado de expansão e geometria de uma ilha. |
+| `Win32` | Interop: estilos estendidos, topmost, região de recorte e métricas da área cliente. |
+| `MediaCoordinator` | Escuta o serviço de mídia, escolhe a sessão ativa e executa comandos. |
+| `SystemMediaService` | Lê e controla a mídia do sistema pelo SMTC. |
+| `MediaSourceCatalog` | Traduz o AppUserModelId em nome legível e marca visual. |
+| `PlaybackSelector` | Decide qual sessão aparece quando há mais de um player. Porte direto. |
+| `NotchGeometry` | Valor puro com os tamanhos recolhido e expandido. Porte direto. |
+| `AppSettings` | Preferências em JSON, em `%APPDATA%\NotchFlow`. |
+| `TrayIconService` | Ícone na bandeja. Equivale ao `NSStatusItem`. |
+| `LaunchAtLoginService` | Início automático pela chave `Run` do usuário. Equivale ao `SMAppService`. |
+
+## O que mudou em relação ao macOS
+
+### Mídia: sete arquivos viraram um
+
+A versão macOS controlava a mídia por Apple Events, com um serviço para o Apple Music,
+outro para o Spotify e um terceiro que varria as abas dos navegadores injetando JavaScript.
+Exigia que o usuário liberasse a automação e a opção "Permitir JavaScript de Apple Events",
+e consultava tudo a cada 5 segundos.
+
+O Windows oferece o `GlobalSystemMediaTransportControlsSessionManager`, que entrega de forma
+oficial e **por evento** os metadados, a capa, a linha do tempo e os comandos, para qualquer
+player que se registre: Spotify, Apple Music, navegadores com `mediaSession` (incluindo o
+YouTube), VLC e outros.
+
+`AppleMusicService`, `SpotifyService`, `BrowserMediaService`, `AppleScriptRunner`,
+`BrowserAppleScript`, `BrowserProbe`, `BrowserScript` e `BrowserCatalog` foram substituídos
+por `SystemMediaService` e `MediaSourceCatalog`. Não há permissão a conceder.
+
+**A única perda de fidelidade** está no rótulo da fonte. No Mac, o app lia o endereço da aba
+e distinguia "YouTube Music" de "YouTube". O SMTC informa o aplicativo, não a aba, então para
+navegadores a marca é inferida dos metadados e pode ficar neutra.
+
+O polling de 5 segundos continua existindo, mas como rede de segurança para eventos perdidos,
+não como mecanismo principal.
+
+### A notch de hardware não existe
+
+A versão macOS media a notch física por `auxiliaryTopLeftArea` e `safeAreaInsets`, e separava
+telas por `CGDisplayIsBuiltin`. Nenhum PC tem notch.
+
+A resposta já estava no próprio desenho: o modo `sliver`, criado para monitores externos. No
+Windows, `DisplayKind` distingue apenas tela principal de secundária. A principal recebe a ilha
+completa, com altura fixa de 32 pixels; as secundárias recebem a tira, se a preferência estiver
+ligada. Como o Windows não tem barra de menus no topo, a ilha encosta na primeira linha da tela.
+
+### O recorte da janela
+
+Este é o problema que o macOS não tem. Lá, a área transparente de um `NSPanel` deixa o clique
+passar. No Windows, uma janela captura o clique em todo o seu retângulo.
+
+A janela da ilha mede 520x224 para acomodar o painel aberto. Sem tratamento, seria um retângulo
+invisível engolindo todo clique na faixa superior de cada monitor.
+
+`Win32.ApplyIslandRegion` resolve com `SetWindowRgn`, recortando a janela para a silhueta da
+ilha: cantos de cima retos e os de baixo arredondados, como o `UnevenRoundedRectangle` do
+SwiftUI. Fora da região a janela deixa de existir para o sistema, e o clique chega ao aplicativo
+de baixo.
+
+O recorte é reaplicado a cada quadro da animação, junto com o tamanho do desenho, para a
+silhueta e o traçado nunca divergirem.
+
+### O recuo da área cliente
+
+Mesmo sem faixa de título, uma janela do WinAppSDK mantém 3 pixels de área não-cliente em volta,
+que o sistema pinta de claro por cima do conteúdo. Isso aparecia como um risco branco na aresta
+superior da ilha.
+
+`NotchWindow.PositionOn` dimensiona a janela para que a **área cliente** meça 520x224 e a sobe
+em `offsetY`, de modo que o topo dessa área caia exatamente na primeira linha do monitor e a
+borda clara fique fora da tela. O recuo é medido em tempo de execução, não fixado em código.
+
+### Detalhes que custaram tempo
+
+- `WS_EX_TOPMOST` é ignorado quando aplicado por `SetWindowLongPtr`. Só `SetWindowPos` com
+  `HWND_TOPMOST` promove a janela.
+- Enumerar com `foreach` um `IReadOnlyList` projetado pelo WinRT lança `InvalidCastException`.
+  O acesso por índice é o caminho suportado, e vale para `DisplayArea.FindAll()` e para as
+  sessões do SMTC.
+- Os glyphs `E7A6` e `E7A7` do Segoe Fluent Icons desenham as setas ao contrário do que os
+  nomes `Undo` e `Redo` sugerem.
+- A barra de progresso é desenhada à mão. O `Slider` padrão traz um polegar grande demais e um
+  traço grosso que não combinam com a ilha, e restilizá-lo custaria mais que desenhá-lo.
+
+## Abertura e fechamento
+
+Igual ao macOS, em duas etapas controladas por `NotchViewModel.SetExpanded`:
+
+1. Ao abrir, `IsExpanded` muda primeiro e a forma cresce. Depois de `ContentInDelay` (110 ms),
+   `ShowsContent` liga e o interior aparece.
+2. Ao fechar, `ShowsContent` desliga primeiro. Depois de `ShapeCloseDelay` (70 ms), `IsExpanded`
+   volta a falso e a forma encolhe.
+
+A etapa pendente é cancelada a cada chamada, então movimentos rápidos do cursor não deixam a
+interface num estado intermediário.
+
+## Rastreamento do ponteiro
+
+`NotchWindowController` consulta `GetCursorPos` a cada 60 ms, a mesma cadência do timer usado
+na versão macOS. A janela é recortada e não-ativante, então depender do hover do XAML seria
+frágil quando outro aplicativo está em primeiro plano.
+
+A histerese abre depois de 55 ms e fecha depois de 300 ms, para o painel não piscar quando o
+cursor apenas atravessa a região.
+
+A cada 33 ciclos (cerca de 2 segundos) o controlador confere se os monitores mudaram, o que
+evita manter uma janela de mensagens só para receber `WM_DISPLAYCHANGE`.
+
+## Persistência
+
+`AppSettings` grava três interruptores em `%APPDATA%\NotchFlow\settings.json`: reduzir nas telas
+secundárias, mostrar em todas as telas e mostrar o ícone da bandeja. O início automático pertence
+ao Windows, na chave `Run`. Metadados, capas e posições ficam só em memória.
+
+Um arquivo de preferências corrompido volta ao padrão em vez de impedir a abertura.
+
+## O que ainda não existe
+
+O painel do calendário. O EventKit agrega todas as contas do sistema com uma permissão local e
+nenhuma requisição de rede, e o Windows não tem equivalente com as mesmas propriedades. A decisão
+está descrita no [README](../../README.md).
+
+`NotchGeometry` já aceita `includesCalendar`: quando o painel existir, a ilha abre a coluna extra
+sem que o resto da geometria mude.

@@ -1,173 +1,180 @@
 <div align="center">
   <img src="Assets/AppIcon.png" width="148" alt="Ícone do NotchFlow">
 
-  # NotchFlow
+  # NotchFlow para Windows
 
-  **Música e calendário no ponto mais natural do seu Mac.**
+  **Sua música no ponto mais natural da tela.**
 
-  [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111827?logo=apple)](https://www.apple.com/macos/)
-  [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
+  [![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-0078D4?logo=windows)](https://www.microsoft.com/windows)
+  [![.NET 9](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+  [![WinUI 3](https://img.shields.io/badge/WinUI-3-0078D4)](https://learn.microsoft.com/windows/apps/winui/)
   [![License: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-22c55e.svg)](LICENSE)
-  [![CI](https://github.com/Thiagof2755/NotchFlow-swift/actions/workflows/ci.yml/badge.svg)](https://github.com/Thiagof2755/NotchFlow-swift/actions/workflows/ci.yml)
-  [![Privacy](https://img.shields.io/badge/privacidade-local--first-22c55e)](PRIVACY.md)
 
-  [**Baixar a versão mais recente**](https://github.com/Thiagof2755/NotchFlow-swift/releases/latest/download/NotchFlow-macOS-arm64.zip)
-
-  Aplicativo nativo, leve e sem telemetria para macOS.
+  Aplicativo nativo, leve e sem telemetria para Windows.
 </div>
 
 ---
 
 ## Visão geral
 
-O NotchFlow transforma a área do notch em um painel discreto para controlar o **Apple Music**, o **Spotify** e a mídia que está tocando no **navegador**, como YouTube e YouTube Music, além de consultar o mês do **Calendário** sem interromper o que você está fazendo.
+O NotchFlow põe uma ilha discreta no topo da tela para controlar o que estiver tocando: Spotify,
+Apple Music, qualquer aba de navegador com áudio ou vídeo, VLC e outros players.
 
-O painel fica recolhido no topo, abre com uma animação ao aproximar o cursor e funciona de forma independente em todos os monitores conectados. Na tela do Mac ele imita o notch; nos monitores externos fica apenas uma tira fina, que abre o painel ao passar o mouse.
+A ilha fica recolhida no topo, abre com uma animação ao aproximar o cursor e funciona de forma
+independente em todos os monitores. Na tela principal ela aparece como uma ilha; nas demais fica
+apenas uma tira fina, que abre o painel ao passar o mouse.
 
-## Novidades da versão 0.2.0
-
-- painel em todos os monitores, com tira compacta nas telas externas;
-- animação de abertura e fechamento mais rápida e suave;
-- indicador recolhido por fonte: Spotify verde, YouTube vermelho, Apple Music laranja e estado neutro cinza;
-- reprodução de Apple Music, Spotify e mídia do navegador, incluindo YouTube;
-- calendário mensal completo com eventos do dia selecionado;
-- tela **Sobre o NotchFlow**, com autoria e acesso direto ao repositório;
-- ícone opcional na barra de menus implementado com o componente nativo do macOS;
-- verificações reforçadas para downloads de capas, logs, arquivos sensíveis e configurações de release.
+Esta é a versão Windows do [NotchFlow para macOS](https://github.com/Thiagof2755/NotchFlow-swift),
+de Thiago Alves. O código Swift original continua neste repositório, em `macos/`, como
+referência da arquitetura e do desenho.
 
 ## O que já está disponível
 
 | Área | Funcionalidades |
 | --- | --- |
 | Música | Capa, faixa, artista, progresso, play/pause, anterior, próxima e avanço ou retorno de 15 segundos. |
-| Fontes | Seleção automática entre Apple Music, Spotify e a aba de mídia do navegador. |
-| Navegador | YouTube, YouTube Music, SoundCloud, Spotify Web e outros sites no Chrome, Brave, Edge, Arc, Vivaldi, Opera e Safari. |
-| Calendário | Mês completo, navegação entre meses, marcações nos dias com eventos e resumo do dia selecionado. |
-| Monitores | Ilha completa na tela do Mac e tira discreta nas telas externas, com painel independente em cada uma. |
+| Fontes | Qualquer player registrado no Windows: Spotify, Apple Music, VLC, foobar2000, MusicBee e outros. |
+| Navegador | YouTube, YouTube Music, SoundCloud, Spotify Web e qualquer site com `mediaSession`, no Edge, Chrome, Firefox, Brave, Opera e Vivaldi. |
+| Monitores | Ilha na tela principal e tira discreta nas demais, com painel independente em cada uma. |
 | Controles | Barra de progresso arrastável, além dos saltos de 15 segundos. |
-| Sistema | Aplicativo acessório, sem ícone no Dock e sem ícone na barra de menus por padrão, com opção de iniciar junto com o Mac. A ilha oferece menu de contexto, encerramento e tela sobre o projeto. |
+| Sistema | Aplicativo residente, sem janela e fora do Alt+Tab, com ícone na bandeja e opção de iniciar junto com o Windows. |
+
+Os controles disponíveis acompanham o que cada player declara: um serviço que não permite pular
+faixa deixa esses botões esmaecidos, em vez de oferecer uma ação que não funciona.
+
+## O que ainda não existe
+
+**O painel do calendário.** Na versão macOS ele lê o EventKit, que agrega todas as contas do
+sistema com uma permissão local e nenhuma requisição de rede. O Windows não tem equivalente com
+as mesmas propriedades:
+
+- `Windows.ApplicationModel.Appointments` depende do app Mail e Calendário, descontinuado em
+  favor do novo Outlook;
+- o Microsoft Graph funciona bem, mas exige OAuth e acesso à rede, o que quebraria a promessa de
+  não ter servidor nem conta;
+- um arquivo `.ics` local ou CalDAV preserva a privacidade, mas exige configuração manual.
+
+É uma decisão de produto em aberto, não uma limitação técnica. A geometria da ilha já prevê a
+coluna extra: quando o painel existir, ela abre sem que o resto mude.
 
 ## Download e instalação
 
-### Download rápido
+1. Baixe e descompacte o pacote em uma pasta de sua preferência.
+2. Execute `NotchFlow.exe`.
+3. Para iniciar junto com o Windows, clique com o botão direito no ícone da bandeja e marque
+   **Abrir com o Windows**.
 
-Baixe o arquivo **NotchFlow-macOS-arm64.zip** na página de [releases](https://github.com/Thiagof2755/NotchFlow-swift/releases/latest) ou use o botão no início desta página.
+Não há instalador, serviço nem tarefa agendada. Para remover, encerre pelo menu da bandeja,
+desmarque o início automático e apague a pasta.
 
-> A versão atual é destinada a Macs com Apple Silicon e macOS 14 ou posterior.
+> Na primeira execução o Windows costuma esconder ícones novos da bandeja. Se não encontrar o
+> ícone, clique na seta de ícones ocultos, ao lado do relógio.
 
-### Primeira abertura
+### Requisitos
 
-1. Descompacte o arquivo baixado.
-2. Mova `NotchFlow.app` para a pasta **Aplicativos**.
-3. Clique com o botão direito no aplicativo e selecione **Abrir**.
-4. Autorize o Calendário e a automação do Apple Music, do Spotify ou do navegador quando o macOS solicitar.
-5. Para controlar a mídia do navegador, ative **Permitir JavaScript de Apple Events**: no Chrome e derivados em **Visualizar › Desenvolvedor**, no Safari em **Desenvolvedor**.
-6. Clique com o botão direito na ilha para abrir o menu com **Ajustes…**, e marque **Abrir ao iniciar o Mac** se quiser inicialização automática.
+- Windows 10 versão 1809 ou posterior, ou Windows 11;
+- [Windows App Runtime 1.8](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads).
 
-> O NotchFlow pede a permissão do Calendário sozinho na primeira execução. Com assinatura ad hoc, o macOS pede de novo depois de cada build, porque considera o aplicativo assinado outra vez. Para manter as permissões, assine com um certificado fixo:
->
-> ```bash
-> NOTCHFLOW_SIGN_IDENTITY="Nome do certificado" ./Scripts/build-app.sh
-> ```
-
-O build público inicial usa assinatura local ad hoc e ainda não é notarizado pela Apple. Por isso, a primeira abertura pode exigir a confirmação descrita acima.
+Para dispensar o runtime, gere um pacote autocontido com `./Scripts/build.ps1 -SelfContained`.
 
 ## Privacidade por padrão
 
 O NotchFlow não possui servidor, conta, banco de dados ou telemetria.
 
-- eventos são lidos diretamente do EventKit e permanecem na memória do Mac;
-- títulos de músicas e controles são obtidos por Apple Events;
-- nenhuma informação de calendário ou reprodução é enviada pelo NotchFlow;
-- as únicas requisições de rede do aplicativo baixam, por HTTPS, capas fornecidas pelo Spotify ou pelo site de mídia aberto no navegador;
-- capas remotas são interrompidas ao atingir 8 MB, aceitam apenas formatos de imagem permitidos e não são salvas em disco;
-- endereços locais, redes privadas e redirecionamentos para HTTP são recusados no carregamento de capas.
-
-Consulte [PRIVACY.md](PRIVACY.md) para a descrição completa e [SECURITY.md](SECURITY.md) para relatar uma vulnerabilidade.
+- os metadados vêm do próprio Windows, pelo SMTC, e permanecem em memória;
+- as capas chegam prontas do sistema, sem download pela rede;
+- **o aplicativo não faz nenhuma requisição de rede**;
+- o log local registra apenas eventos do próprio aplicativo, nunca o que você ouviu;
+- as preferências são três interruptores em `%APPDATA%\NotchFlow\settings.json`.
 
 ## Permissões utilizadas
 
-| Permissão | Motivo | O que o app não faz |
-| --- | --- | --- |
-| Calendário | Exibir os eventos do mês. | Não cria, altera ou exclui eventos. |
-| Automação | Ler e controlar Apple Music, Spotify e a aba de mídia do navegador. | Consulta localmente URLs para encontrar serviços compatíveis, não executa comandos fornecidos pelo usuário e não envia conteúdo das abas. |
-| Item de início | Abrir o próprio aplicativo após o login. | Não instala daemon ou serviço privilegiado. |
+Nenhuma. O SMTC é uma API pública que não exige consentimento, e o início automático usa a chave
+`Run` do usuário atual, sem privilégio de administrador.
+
+Isso é uma vantagem sobre a versão macOS, que precisa de autorização de Automação para cada
+player e da opção "Permitir JavaScript de Apple Events" nos navegadores.
 
 ## Desenvolvimento
 
 ### Requisitos
 
-- macOS 14 ou posterior;
-- Xcode 26 ou toolchain Swift 6 compatível;
+- .NET SDK 9 ou posterior;
+- Windows SDK 10.0.26100;
 - Git.
 
-Não são necessários Homebrew, Node.js, chaves do Spotify ou dependências externas de pacote.
+Não são necessários Visual Studio, workloads adicionais nem chaves de API.
 
-### Executar pelo Xcode
+Todos os comandos abaixo rodam a partir da pasta `windows/`.
 
-1. Abra `Package.swift` no Xcode.
-2. Selecione o esquema **NotchFlow**.
-3. Pressione `⌘R` para executar e `⌘.` para encerrar.
-
-### Executar pelo terminal
+### Compilar e executar
 
 ```bash
-swift test
-swift run NotchFlow
+dotnet run --project src/NotchFlow.App/NotchFlow.App.csproj -c Release
 ```
 
-### Gerar o aplicativo
+### Testes
 
 ```bash
-./Scripts/build-app.sh
+dotnet test NotchFlow.sln
 ```
 
-O build executa automaticamente a auditoria e os testes. O pacote será criado em `dist/NotchFlow.app` com ícone, `Info.plist`, permissões mínimas declaradas, hardened runtime e assinatura local ad hoc.
+### Gerar o pacote
+
+```bash
+./Scripts/build.ps1
+```
+
+O script roda os testes antes de empacotar e publica o SHA-256 do resultado em `windows/dist/`.
 
 ## Arquitetura
 
 ```mermaid
 flowchart LR
-    UI["SwiftUI · Notch e Ajustes"] --> VM["NotchFlowViewModel"]
+    UI["WinUI 3 · NotchWindow"] --> VM["NotchViewModel"]
+    UI --> WIN32["Win32 · recorte e estilos"]
     VM --> MEDIA["MediaCoordinator"]
-    VM --> CAL["CalendarService"]
-    VM --> LOGIN["LaunchAtLoginService"]
-    MEDIA --> MUSIC["Apple Music"]
-    MEDIA --> SPOTIFY["Spotify"]
-    MEDIA --> BROWSER["Navegadores"]
-    CAL --> EVENTKIT["EventKit"]
-    LOGIN --> SM["ServiceManagement"]
+    MEDIA --> SMTC["SystemMediaService"]
+    SMTC --> WINRT["Windows.Media.Control"]
+    WINRT --> PLAYERS["Spotify · Navegadores · VLC"]
+    APP["App"] --> TRAY["TrayIconService"]
+    APP --> LOGIN["LaunchAtLoginService"]
 ```
 
-Detalhes das responsabilidades, fluxos e decisões técnicas estão em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Três projetos: `NotchFlow.Core` concentra os modelos e o acesso ao SMTC sem depender de XAML, o
+que o torna testável; `NotchFlow.App` é o aplicativo WinUI 3; `NotchFlow.Core.Tests` cobre a
+lógica pura.
 
-## Estrutura do projeto
+Detalhes das decisões, e o que mudou em relação ao macOS, estão em
+[windows/docs/ARCHITECTURE.md](windows/docs/ARCHITECTURE.md).
+
+## Estrutura do repositório
+
+As duas implementações vivem lado a lado, cada uma autocontida:
 
 ```text
-NotchFlow-swift/
-├── Assets/                 # ícone-fonte do aplicativo
-├── Configuration/          # Info.plist e entitlements
-├── Scripts/                # auditoria e empacotamento local
-├── Sources/NotchFlow/      # aplicativo macOS
-├── Tests/NotchFlowTests/   # testes de unidade
-└── .github/workflows/      # CI e publicação de releases
+NotchFlow-Win/
+├── windows/                       # a versão Windows, o produto deste repositório
+│   ├── NotchFlow.sln
+│   ├── src/NotchFlow.Core/        # modelos, SMTC e seleção de fonte
+│   ├── src/NotchFlow.App/         # aplicativo WinUI 3
+│   ├── tests/NotchFlow.Core.Tests/
+│   ├── Scripts/build.ps1          # empacotamento local
+│   └── docs/ARCHITECTURE.md
+├── macos/                         # a versão Swift original, mantida como referência
+│   ├── Package.swift
+│   ├── Sources/ · Tests/ · Configuration/ · Scripts/
+│   └── docs/ARCHITECTURE.md
+└── Assets/                        # ícone, compartilhado pelas duas
 ```
 
 ## Roadmap
 
-- aperfeiçoar acessibilidade e navegação por teclado;
-- adicionar preferências de aparência;
-- ampliar testes dos serviços de mídia;
-- disponibilizar build universal e notarizado.
-
-## Estado do projeto
-
-O NotchFlow está em desenvolvimento inicial. Use a seção de [Issues](https://github.com/Thiagof2755/NotchFlow-swift/issues) para problemas não sensíveis.
-
-## Contribuindo
-
-O NotchFlow é open source e aceita contribuições da comunidade. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para preparar mudanças, executar as verificações e abrir um pull request.
+- decidir e implementar a fonte do calendário;
+- janela de ajustes, hoje substituída pelo menu da bandeja;
+- preferências de aparência;
+- aperfeiçoar acessibilidade e navegação por teclado.
 
 ## Licença
 
-Distribuído sob a [licença MIT](LICENSE). Você pode usar, estudar, modificar e distribuir o NotchFlow, inclusive comercialmente, desde que preserve o aviso de copyright e a licença.
+Distribuído sob a [licença MIT](LICENSE), como o projeto original.
