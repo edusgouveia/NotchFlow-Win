@@ -155,7 +155,7 @@ public partial class App : Application
                 IsChecked = settings.MinimizeOnSecondaryDisplays
             },
             TrayMenuItem.Separator(),
-            new("Notificações do Teams na ilha",
+            new("Notificações na ilha",
                 () => settings.NotificationsEnabled = !settings.NotificationsEnabled)
             {
                 IsChecked = settings.NotificationsEnabled

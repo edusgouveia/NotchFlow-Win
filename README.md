@@ -35,7 +35,7 @@ referência da arquitetura e do desenho.
 | Música | Capa, faixa, artista, progresso, play/pause, anterior, próxima e avanço ou retorno de 15 segundos. |
 | Fontes | Qualquer player registrado no Windows: Spotify, Apple Music, VLC, foobar2000, MusicBee e outros. |
 | Navegador | YouTube, YouTube Music, SoundCloud, Spotify Web e qualquer site com `mediaSession`, no Edge, Chrome, Firefox, Brave, Opera e Vivaldi. |
-| Notificações | Indicador persistente do Teams na ilha, com contador, e a lista de quem escreveu no painel. Desligado por padrão. |
+| Notificações | Indicador persistente na ilha, com contador, e a lista de quem escreveu no painel. Acompanha Teams, Outlook e WhatsApp. Desligado por padrão. |
 | Monitores | Ilha na tela principal e tira discreta nas demais, com painel independente em cada uma. |
 | Controles | Barra de progresso arrastável, além dos saltos de 15 segundos. |
 | Sistema | Aplicativo residente, sem janela e fora do Alt+Tab, com ícone na bandeja e opção de iniciar junto com o Windows. |
@@ -43,10 +43,17 @@ referência da arquitetura e do desenho.
 Os controles disponíveis acompanham o que cada player declara: um serviço que não permite pular
 faixa deixa esses botões esmaecidos, em vez de oferecer uma ação que não funciona.
 
-## Notificações do Teams
+## Notificações na ilha
 
-A ilha acompanha as notificações do Teams e mostra um indicador discreto com o número de
-mensagens esperando. Ao passar o mouse, o painel lista quem escreveu e a prévia.
+A ilha acompanha as notificações de **Teams, Outlook e WhatsApp**, e mostra um indicador
+discreto com o número de mensagens esperando. Ao passar o mouse, o painel lista quem escreveu
+e a prévia. Cada linha traz um ponto na cor do aplicativo de origem.
+
+Quando tudo vem do mesmo lugar, o cabeçalho nomeia o aplicativo ("Outlook · 2"); com fontes
+misturadas ele fica genérico, porque nomear uma delas seria enganoso.
+
+Acrescentar uma fonte é acrescentar uma linha em
+[`NotificationSourceCatalog`](windows/src/NotchFlow.Core/Notifications/NotificationSourceCatalog.cs).
 
 **A ilha não se abre sozinha por padrão**, e isso é deliberado. O Windows já mostra um toast
 para a mesma mensagem, e abrir a ilha por cima duplicaria o aviso no ponto mais chamativo da
@@ -59,12 +66,38 @@ de se fechar e passa a obedecer o hover.
 
 ### Para ativar
 
-1. Botão direito no ícone da bandeja, marque **Notificações do Teams na ilha**.
+1. Botão direito no ícone da bandeja, marque **Notificações na ilha**.
 2. Autorize o NotchFlow quando o Windows pedir, em Privacidade e Segurança, Notificações.
-3. No Teams, em Configurações, Notificações, escolha o estilo **Windows**. Com o estilo interno
-   do Teams as mensagens não passam pelo sistema e nada é visto.
 
 O recurso vem desligado porque a permissão é ampla, como explicado abaixo.
+
+### O Teams desktop não funciona, e não há o que fazer
+
+Vale registrar, para ninguém perder tempo investigando de novo.
+
+O aplicativo desktop do Teams (`ms-teams`, versão nova) **desenha a própria notificação em uma
+WebView** e nunca a entrega ao Windows. O banner imita o visual do sistema, com caixa de
+resposta rápida e tudo, mas é uma janela do próprio Teams.
+
+Verificado por quatro caminhos independentes, numa máquina com o Teams em uso:
+
+| Verificação | Resultado |
+| --- | --- |
+| Processo dono do pixel do banner | `ms-teams`, classe `TeamsWebView` |
+| Registro de origens de notificação do Windows | 63 aplicativos, Teams ausente após 3 mensagens |
+| Central de Ações | Nenhuma notificação do Teams, com o banner visível na tela |
+| Monitor ao vivo por 10 minutos | Capturou outros aplicativos nos mesmos segundos |
+
+Não é limitação do NotchFlow: **nenhum** aplicativo consegue ler essa notificação, porque ela
+não existe fora do processo do Teams. A `UserNotificationListener` é a API oficial e só enxerga
+o que chega ao sistema.
+
+**O Teams pelo navegador funciona.** Notificações web passam pelo Windows normalmente, e o
+identificador do PWA contém "teams", então o catálogo já reconhece sem alteração nenhuma. Para
+instalar: abra `teams.microsoft.com` no Edge, menu **…**, **Aplicativos**, **Instalar este site
+como um aplicativo**.
+
+A entrada do Teams continua no catálogo justamente por causa disso.
 
 ## O que ainda não existe
 

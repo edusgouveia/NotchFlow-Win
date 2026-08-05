@@ -79,7 +79,11 @@ public sealed partial class NotchWindow : Window
 
     /// <summary>Linha da lista de notificações. Existe porque o tempo relativo é calculado
     /// no momento da exibição, e não cabe no modelo imutável.</summary>
-    private sealed record NotificationRow(string Title, string Body, string Time);
+    private sealed record NotificationRow(
+        string Title, string Body, string Time, SolidColorBrush Accent);
+
+    /// <summary>Cinza usado quando a lista mistura fontes e nenhuma cor representa o todo.</summary>
+    private static readonly Color NeutralAccent = Color.FromArgb(0xFF, 0xB8, 0xB8, 0xB8);
 
     public NotchViewModel ViewModel => _viewModel;
 
@@ -183,17 +187,26 @@ public sealed partial class NotchWindow : Window
             return;
         }
 
-        var source = notifications.Visible.Count > 0 ? notifications.Visible[0].Source : "Notificações";
+        // Com fontes misturadas o cabeçalho fica genérico: dizer "Teams" numa lista que
+        // também traz Outlook seria mentira. A cor acompanha a mesma regra.
+        var single = notifications.SingleSource;
+        var rotulo = single ?? "Notificações";
         NotificationHeader.Text = notifications.Count > 1
-            ? $"{source} · {notifications.Count}"
-            : source;
+            ? $"{rotulo} · {notifications.Count}"
+            : rotulo;
+
+        var corDoCabecalho = new SolidColorBrush(
+            single is null ? NeutralAccent : FromArgb(notifications.Accent));
+        NotificationHeader.Foreground = corDoCabecalho;
+        NotificationIcon.Foreground = corDoCabecalho;
 
         var now = DateTimeOffset.Now;
         NotificationList.ItemsSource = notifications.Visible
             .Select(item => new NotificationRow(
                 item.HasTitle ? item.Title : item.Source,
                 item.Body,
-                item.RelativeTime(now)))
+                item.RelativeTime(now),
+                new SolidColorBrush(FromArgb(item.Accent))))
             .ToList();
 
         var overflow = notifications.Overflow;

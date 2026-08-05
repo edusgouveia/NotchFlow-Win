@@ -31,16 +31,20 @@ public class NotificationCoordinatorTests : IDisposable
         public void Dispose() { }
     }
 
-    private static NotificationItem Item(uint id, int minutesAgo = 0, string title = "Fulano") => new()
-    {
-        Id = id,
-        AppId = "MSTeams_8wekyb3d8bbwe!MSTeams",
-        Source = "Teams",
-        Accent = 0xFF6264A7,
-        Title = title,
-        Body = "mensagem",
-        ReceivedAt = Base.AddMinutes(-minutesAgo)
-    };
+    private static NotificationItem Item(
+        uint id,
+        int minutesAgo = 0,
+        string title = "Fulano",
+        string source = "Teams") => new()
+        {
+            Id = id,
+            AppId = "MSTeams_8wekyb3d8bbwe!MSTeams",
+            Source = source,
+            Accent = 0xFF6264A7,
+            Title = title,
+            Body = "mensagem",
+            ReceivedAt = Base.AddMinutes(-minutesAgo)
+        };
 
     private (NotificationCoordinator Coordinator, FakeService Service) Build()
     {
@@ -180,6 +184,48 @@ public class NotificationCoordinatorTests : IDisposable
         Assert.False(coordinator.HasNotifications);
         Assert.Equal(0, coordinator.Count);
         Assert.Empty(coordinator.Visible);
+
+        coordinator.Dispose();
+    }
+
+    [Fact]
+    public async Task ComUmaFonteSoOCabecalhoPodeNomearOAplicativo()
+    {
+        var (coordinator, service) = Build();
+        service.Items = [Item(2, source: "Outlook"), Item(1, source: "Outlook")];
+        await coordinator.StartAsync();
+
+        Assert.Equal("Outlook", coordinator.SingleSource);
+
+        coordinator.Dispose();
+    }
+
+    [Fact]
+    public async Task ComFontesMisturadasOCabecalhoNaoPodeNomearNenhuma()
+    {
+        var (coordinator, service) = Build();
+        service.Items =
+        [
+            Item(3, source: "WhatsApp"),
+            Item(2, source: "Outlook"),
+            Item(1, source: "Teams")
+        ];
+        await coordinator.StartAsync();
+
+        // Dizer "Teams" numa lista que também tem Outlook seria mentira.
+        Assert.Null(coordinator.SingleSource);
+
+        coordinator.Dispose();
+    }
+
+    [Fact]
+    public async Task SemNotificacoesNaoHaFonteAExibir()
+    {
+        var (coordinator, service) = Build();
+        service.Items = [];
+        await coordinator.StartAsync();
+
+        Assert.Null(coordinator.SingleSource);
 
         coordinator.Dispose();
     }

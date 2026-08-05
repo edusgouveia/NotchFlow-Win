@@ -148,6 +148,33 @@ crescer para sempre e permite avisar de novo se a mesma notificação voltar.
 A primeira leitura apenas registra o que já estava lá: sem isso, abrir o NotchFlow com mensagens
 acumuladas dispararia um aviso para cada uma.
 
+### Várias fontes na mesma coluna
+
+O `NotificationSourceCatalog` acompanha Teams, Outlook e WhatsApp. Como a lista pode misturar
+aplicativos, duas decisões de apresentação seguem daí:
+
+- cada linha traz um ponto na cor da origem, que é o que diferencia um e-mail de uma mensagem
+  sem repetir o nome do aplicativo em cada item;
+- o cabeçalho só nomeia o aplicativo quando **todos** os itens vêm dele, o que
+  `NotificationCoordinator.SingleSource` resolve. Com mistura, o rótulo fica genérico e a cor
+  neutra: escrever "Teams" numa lista que também traz Outlook seria enganoso.
+
+A prévia ocupa uma linha só. Com três notificações, duas linhas estouram a altura da ilha e a
+última fica cortada — quem escreveu importa mais que o texto completo.
+
+### O Teams desktop não entrega notificações ao Windows
+
+O aplicativo desktop do Teams desenha a própria notificação em uma WebView (processo
+`ms-teams`, classe de janela `TeamsWebView`) e nunca a publica no sistema. O banner imita o
+visual nativo, com caixa de resposta rápida, mas não passa pela Central de Ações.
+
+Confirmado por quatro caminhos: o processo dono do pixel do banner, a ausência do Teams no
+registro de origens de notificação após três mensagens, a Central de Ações vazia com o banner
+na tela, e um monitor de 10 minutos que capturou outros aplicativos nos mesmos segundos.
+
+Nenhum aplicativo consegue ler essa notificação. A entrada do Teams permanece no catálogo
+porque a **versão web funciona**: o identificador do PWA contém "teams" e casa na mesma regra.
+
 ### Duas descobertas sobre a API
 
 **Funciona sem identidade de pacote.** A expectativa era que a capability

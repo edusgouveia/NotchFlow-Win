@@ -14,17 +14,25 @@ public sealed record NotificationSource(string Match, string DisplayName, uint A
 /// </summary>
 public static class NotificationSourceCatalog
 {
-    /// <summary>Roxo da marca do Teams.</summary>
     private const uint TeamsPurple = 0xFF6264A7;
+    private const uint OutlookBlue = 0xFF0F6CBD;
+    private const uint WhatsAppGreen = 0xFF25D366;
 
     /// <summary>
     /// A comparação é por "contém", em minúsculas, contra o AppUserModelId e o nome exibido.
-    /// O Teams mudou de identificador entre a versão clássica e a nova, e casar pelos dois
-    /// campos cobre as duas sem precisar listar cada AUMID.
+    /// Casar pelos dois campos cobre as variações de cada aplicativo sem listar cada AUMID:
+    /// o Outlook aparece como <c>Microsoft.Office.OUTLOOK.EXE.15</c> na versão clássica e
+    /// como <c>Microsoft.OutlookForWindows_...</c> na nova.
+    ///
+    /// O Teams continua aqui, mas fica registrado que na versão desktop atual ele desenha a
+    /// própria notificação em uma WebView e nunca a entrega ao Windows, então não há o que
+    /// ler. Pelo navegador funciona: o identificador do PWA contém "teams" e casa nesta lista.
     /// </summary>
     private static readonly NotificationSource[] Sources =
     [
-        new("teams", "Teams", TeamsPurple)
+        new("teams", "Teams", TeamsPurple),
+        new("outlook", "Outlook", OutlookBlue),
+        new("whatsapp", "WhatsApp", WhatsAppGreen)
     ];
 
     public static IReadOnlyList<NotificationSource> All => Sources;

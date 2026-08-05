@@ -315,17 +315,18 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+                            <!-- A cor é definida em código: acompanha a fonte quando há uma
+                                 só, e fica neutra quando a lista mistura aplicativos. -->
                             <FontIcon
+                                x:Name="NotificationIcon"
                                 FontFamily="Segoe Fluent Icons"
                                 FontSize="8"
                                 Glyph="&#xE8BD;"
-                                Foreground="#6264A7"
                                 VerticalAlignment="Center" />
                             <TextBlock
                                 x:Name="NotificationHeader"
                                 FontSize="8.5"
                                 FontWeight="SemiBold"
-                                Foreground="#6264A7"
                                 VerticalAlignment="Center" />
                         </StackPanel>
 
@@ -334,6 +335,7 @@
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,7">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
@@ -342,9 +344,21 @@
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
 
-                                        <TextBlock
+                                        <!-- Ponto da cor da fonte: com Teams, Outlook e
+                                             WhatsApp na mesma lista, é o que diz de onde
+                                             veio cada linha sem repetir o nome. -->
+                                        <Ellipse
                                             Grid.Row="0"
                                             Grid.Column="0"
+                                            Width="5"
+                                            Height="5"
+                                            Margin="0,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Fill="{Binding Accent}" />
+
+                                        <TextBlock
+                                            Grid.Row="0"
+                                            Grid.Column="1"
                                             Text="{Binding Title}"
                                             FontSize="10.5"
                                             FontWeight="SemiBold"
@@ -354,22 +368,27 @@
 
                                         <TextBlock
                                             Grid.Row="0"
-                                            Grid.Column="1"
+                                            Grid.Column="2"
                                             Text="{Binding Time}"
                                             FontSize="8"
                                             Foreground="#7A7A7A"
                                             Margin="6,0,0,0"
                                             VerticalAlignment="Center" />
 
+                                        <!-- Uma linha só: com três notificações, duas linhas
+                                             de prévia estouram a altura da ilha e a última
+                                             fica cortada. Quem escreveu importa mais que
+                                             o texto completo. -->
                                         <TextBlock
                                             Grid.Row="1"
+                                            Grid.Column="1"
                                             Grid.ColumnSpan="2"
                                             Text="{Binding Body}"
                                             FontSize="9"
                                             Foreground="#9A9A9A"
-                                            TextWrapping="Wrap"
+                                            TextWrapping="NoWrap"
                                             TextTrimming="CharacterEllipsis"
-                                            MaxLines="2" />
+                                            MaxLines="1" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

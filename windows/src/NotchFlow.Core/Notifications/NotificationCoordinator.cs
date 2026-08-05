@@ -62,6 +62,7 @@ public sealed class NotificationCoordinator : INotifyPropertyChanged, IDisposabl
             RaisePropertyChanged(nameof(HasNotifications));
             RaisePropertyChanged(nameof(Visible));
             RaisePropertyChanged(nameof(Accent));
+            RaisePropertyChanged(nameof(SingleSource));
         }
     }
 
@@ -78,6 +79,33 @@ public sealed class NotificationCoordinator : INotifyPropertyChanged, IDisposabl
 
     /// <summary>Cor da notificação mais recente, usada no indicador recolhido.</summary>
     public uint Accent => _items.Count > 0 ? _items[0].Accent : 0xFF9E9E9E;
+
+    /// <summary>
+    /// Nome da fonte quando tudo vem do mesmo aplicativo, ou nulo quando há mistura.
+    /// Com mistura o cabeçalho precisa ser genérico: dizer "Teams" numa lista que também
+    /// tem Outlook seria mentira.
+    /// </summary>
+    public string? SingleSource
+    {
+        get
+        {
+            if (_items.Count == 0)
+            {
+                return null;
+            }
+
+            var first = _items[0].Source;
+            foreach (var item in _items)
+            {
+                if (item.Source != first)
+                {
+                    return null;
+                }
+            }
+
+            return first;
+        }
+    }
 
     public NotificationAccess Access => _service.Access;
 
