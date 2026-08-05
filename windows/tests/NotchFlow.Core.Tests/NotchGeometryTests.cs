@@ -48,14 +48,39 @@ public class NotchGeometryTests
     }
 
     [Fact]
-    public void AreaDeInteracaoDaIlhaCompletaENoMinimoOVisual()
+    public void AreaDeInteracaoDaIlhaCompletaAcompanhaOVisual()
     {
         var geometry = NotchGeometry.Make(DisplayKind.Primary, minimizeOnSecondaryDisplays: true);
 
-        // A ilha passou a ter largura variável e pode ficar estreita, então a região de
-        // hover tem um piso próprio. A altura, encostada no topo da tela, não precisa.
-        Assert.True(geometry.ClosedInteractionWidth >= geometry.ClosedWidthValue);
+        // A ilha é larga o bastante para servir de alvo por si só.
+        Assert.Equal(geometry.ClosedWidthValue, geometry.ClosedInteractionWidth);
         Assert.Equal(geometry.ClosedHeightValue, geometry.ClosedInteractionHeight);
+    }
+
+    [Fact]
+    public void AIlhaEDiscretaMasContinuaSendoUmaFaixa()
+    {
+        var geometry = NotchGeometry.Make(DisplayKind.Primary, minimizeOnSecondaryDisplays: true);
+
+        // Menor que os 156 herdados do Mac, e ainda comprida o bastante para ser
+        // reconhecível como alça em vez de virar um ponto no topo da tela.
+        Assert.True(geometry.ClosedWidthValue < 156);
+        Assert.True(geometry.ClosedWidthValue > 90);
+
+        // A altura precisa acomodar o contador de notificações, de 14 pontos, com folga.
+        Assert.True(geometry.ClosedHeightValue > 14);
+        Assert.True(geometry.ClosedHeightValue <= 24);
+    }
+
+    [Fact]
+    public void AFaixaSuperiorDoPainelCabeOsBotoesDeAcao()
+    {
+        var geometry = NotchGeometry.Make(DisplayKind.Primary, minimizeOnSecondaryDisplays: true);
+
+        // Os botões têm 22 pontos. Sem um piso, uma ilha recolhida baixa deixaria a faixa
+        // menor que eles e os botões ficariam colados na borda.
+        Assert.True(geometry.ExpandedTopPadding >= 30);
+        Assert.True(geometry.ExpandedTopPadding >= geometry.ClosedHeightValue);
     }
 
     [Fact]

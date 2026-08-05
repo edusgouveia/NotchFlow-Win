@@ -56,10 +56,15 @@ public sealed class NotchViewModel : INotifyPropertyChanged
         DisplayKind = displayKind;
         _geometry = BuildGeometry();
 
-        // A ilha recolhida tem largura variável e a coluna de notificações aparece e some,
-        // então qualquer mudança nas duas fontes precisa recalcular a geometria.
-        Notifications.PropertyChanged += (_, _) => RefreshGeometry();
-        Media.PropertyChanged += (_, _) => RefreshGeometry();
+        // A coluna de notificações aparece e some conforme há o que mostrar, então a
+        // geometria acompanha. A ilha recolhida tem tamanho fixo e não depende disso.
+        Notifications.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(NotificationCoordinator.HasNotifications))
+            {
+                RefreshGeometry();
+            }
+        };
     }
 
     public MediaCoordinator Media { get; }
@@ -142,20 +147,10 @@ public sealed class NotchViewModel : INotifyPropertyChanged
         }
     }
 
-    private NotchGeometry BuildGeometry()
-    {
-        var snapshot = Media.CurrentSnapshot;
-        var mostraNotificacoes = _settings.NotificationsEnabled && Notifications.HasNotifications;
-
-        return NotchGeometry.Make(
-            DisplayKind,
-            _settings.MinimizeOnSecondaryDisplays,
-            includesNotifications: mostraNotificacoes,
-            closedContent: new ClosedContent(
-                HasArtwork: snapshot?.ArtworkData is not null,
-                HasMedia: snapshot is not null,
-                NotificationCount: mostraNotificacoes ? Notifications.Count : 0));
-    }
+    private NotchGeometry BuildGeometry() => NotchGeometry.Make(
+        DisplayKind,
+        _settings.MinimizeOnSecondaryDisplays,
+        includesNotifications: _settings.NotificationsEnabled && Notifications.HasNotifications);
 
     public void Toggle() => SetExpanded(!IsExpanded);
 

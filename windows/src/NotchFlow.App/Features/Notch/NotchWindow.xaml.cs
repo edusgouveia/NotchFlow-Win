@@ -349,11 +349,8 @@ public sealed partial class NotchWindow : Window
         RenderExpanded(snapshot, accent);
     }
 
-    /// <summary>
-    /// Conteúdo da ilha recolhida. A largura dela vem da soma do que fica visível aqui,
-    /// calculada em <see cref="NotchGeometry"/>, então este método e a geometria precisam
-    /// concordar sobre o que aparece.
-    /// </summary>
+    /// <summary>Conteúdo da ilha recolhida: capa à esquerda, risco no meio, estado da
+    /// reprodução e contador de notificações à direita.</summary>
     private void RenderCollapsed(PlaybackSnapshot? snapshot, Color accent)
     {
         // Numa tela secundária a ilha recolhida é só a tira, sem capa, ícone nem contador.
@@ -383,10 +380,8 @@ public sealed partial class NotchWindow : Window
             NotificationBadge.Visibility = Visibility.Collapsed;
         }
 
-        // A cápsula neutra é a alça de última instância: só aparece quando não há
-        // absolutamente mais nada, senão a ilha ociosa viraria um ponto invisível.
-        var temConteudo = hasArtwork || (!isSliver && hasMedia) || badgeCount > 0;
-        CollapsedIndicator.Visibility = temConteudo ? Visibility.Collapsed : Visibility.Visible;
+        // O risco no meio some só quando há capa ocupando o lugar dele.
+        CollapsedIndicator.Visibility = hasArtwork ? Visibility.Collapsed : Visibility.Visible;
         CollapsedIndicator.Background = new SolidColorBrush(
             hasMedia ? accent : Color.FromArgb(0x9E, 0x9E, 0x9E, 0x9E));
 

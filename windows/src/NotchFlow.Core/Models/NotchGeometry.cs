@@ -21,18 +21,6 @@ public enum ClosedStyle
 /// Dimensões da ilha. É um valor puro, sem dependência de XAML ou Win32, para permitir testes.
 /// As constantes vêm do NotchFlow para macOS e foram preservadas para o desenho carregar idêntico.
 /// </summary>
-/// <summary>
-/// O que a ilha recolhida está mostrando. Define a largura dela, para não reservar espaço
-/// que não usa.
-/// </summary>
-public readonly record struct ClosedContent(
-    bool HasArtwork,
-    bool HasMedia,
-    int NotificationCount)
-{
-    public static readonly ClosedContent Idle = new(false, false, 0);
-}
-
 public sealed record NotchGeometry
 {
     /// <summary>Área da janela que hospeda a ilha. Precisa acomodar o painel expandido e a sombra.</summary>
@@ -58,31 +46,20 @@ public sealed record NotchGeometry
 
     public const double SecondaryTopPadding = 26;
 
-    /// <summary>Altura da ilha recolhida. No macOS derivava da barra de menus; o Windows não tem
-    /// barra no topo, então usamos alturas fixas.</summary>
-    private const double PrimaryClosedHeight = 26;
-    private const double SecondaryClosedHeight = 24;
+    /// <summary>
+    /// Tamanho da ilha recolhida. No macOS a largura era 156 para imitar a notch de hardware
+    /// e a altura vinha da barra de menus. No Windows não há o que imitar, então a ilha é uma
+    /// faixa mais discreta: comprida o bastante para ser uma alça reconhecível, e com a altura
+    /// pouco maior que o contador de notificações que ela carrega.
+    /// </summary>
+    private const double ClosedWidth = 120;
+    private const double PrimaryClosedHeight = 22;
+    private const double SecondaryClosedHeight = 20;
 
-    // Medidas dos elementos que a ilha recolhida mostra. A largura sai da soma do que
-    // está visível: no macOS ela era fixa em 156 para imitar a notch de hardware, e no
-    // Windows, sem notch para imitar, largura fixa seria só espaço preto desperdiçado.
-    private const double ClosedPadding = 6;
-    private const double ClosedArtworkSize = 16;
-    private const double ClosedStatusWidth = 12;
-    private const double ClosedBadgeWidth = 16;
-
-    /// <summary>O contador fica mais largo ao passar de um dígito, virando "9+".</summary>
-    private const double ClosedWideBadgeWidth = 22;
-
-    private const double ClosedChipSpacing = 5;
-
-    /// <summary>Largura da ilha ociosa, que mostra apenas a cápsula neutra. É também o
-    /// piso das outras combinações, para a ilha nunca virar um ponto perdido no topo.</summary>
-    private const double ClosedIdleWidth = 38;
-
-    /// <summary>Largura mínima da região que responde ao ponteiro. A ilha encolheu, mas
-    /// mirar nela não pode ficar difícil.</summary>
-    private const double ClosedInteractionMinimumWidth = 96;
+    /// <summary>Faixa livre no topo do painel aberto. Acompanha a altura recolhida, mas com
+    /// um piso: os botões de ação têm 22 pontos e precisam de folga para não ficarem colados
+    /// na borda quando a ilha recolhida é baixa.</summary>
+    private const double MinimumExpandedTopPadding = 30;
 
     public required DisplayKind DisplayKind { get; init; }
     public required ClosedStyle ClosedStyle { get; init; }
@@ -120,60 +97,20 @@ public sealed record NotchGeometry
 
     public bool IsMinimized => ClosedStyle == ClosedStyle.Sliver;
 
-    /// <summary>Região que responde ao ponteiro. É maior que o visual nos dois estilos:
-    /// a tira tem 9 pixels de altura e a ilha encolhe conforme o conteúdo, então em ambos
-    /// mirar só no desenho seria desconfortável.</summary>
-    public double ClosedInteractionWidth => IsMinimized
-        ? Math.Max(ClosedWidthValue, SliverInteractionWidth)
-        : Math.Max(ClosedWidthValue, ClosedInteractionMinimumWidth);
+    /// <summary>Região que responde ao ponteiro. Na tira ela é maior que o visual, porque
+    /// mirar em 9 pixels de altura seria impossível. Na ilha, que é larga o bastante,
+    /// o alvo é o próprio desenho.</summary>
+    public double ClosedInteractionWidth =>
+        IsMinimized ? Math.Max(ClosedWidthValue, SliverInteractionWidth) : ClosedWidthValue;
 
     public double ClosedInteractionHeight =>
         IsMinimized ? Math.Max(ClosedHeightValue, SliverInteractionHeight) : ClosedHeightValue;
-
-    /// <summary>
-    /// Largura da ilha recolhida, somando só o que está visível.
-    /// </summary>
-    private static double MeasureClosedWidth(ClosedContent content)
-    {
-        var total = 0.0;
-        var chips = 0;
-
-        void Add(double largura)
-        {
-            total += largura;
-            chips++;
-        }
-
-        if (content.HasArtwork)
-        {
-            Add(ClosedArtworkSize);
-        }
-
-        if (content.HasMedia)
-        {
-            Add(ClosedStatusWidth);
-        }
-
-        if (content.NotificationCount > 0)
-        {
-            Add(content.NotificationCount > 9 ? ClosedWideBadgeWidth : ClosedBadgeWidth);
-        }
-
-        if (chips == 0)
-        {
-            return ClosedIdleWidth;
-        }
-
-        var largura = ClosedPadding * 2 + total + ClosedChipSpacing * (chips - 1);
-        return Math.Max(largura, ClosedIdleWidth);
-    }
 
     public static NotchGeometry Make(
         DisplayKind displayKind,
         bool minimizeOnSecondaryDisplays,
         bool includesCalendar = false,
-        bool includesNotifications = false,
-        ClosedContent closedContent = default)
+        bool includesNotifications = false)
     {
         if (displayKind == DisplayKind.Secondary && minimizeOnSecondaryDisplays)
         {
@@ -197,9 +134,9 @@ public sealed record NotchGeometry
         {
             DisplayKind = displayKind,
             ClosedStyle = ClosedStyle.Notch,
-            ClosedWidthValue = MeasureClosedWidth(closedContent),
+            ClosedWidthValue = ClosedWidth,
             ClosedHeightValue = height,
-            ExpandedTopPadding = height + 4,
+            ExpandedTopPadding = Math.Max(height + 4, MinimumExpandedTopPadding),
             IncludesCalendar = includesCalendar,
             IncludesNotifications = includesNotifications
         };

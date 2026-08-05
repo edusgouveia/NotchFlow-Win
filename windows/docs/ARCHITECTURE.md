@@ -75,23 +75,22 @@ Windows, `DisplayKind` distingue apenas tela principal de secundária. A princip
 completa; as secundárias recebem a tira, se a preferência estiver ligada. Como o Windows não tem
 barra de menus no topo, a ilha encosta na primeira linha da tela.
 
-Há uma consequência que demorou a aparecer: sem notch para imitar, **largura fixa é só espaço
-preto desperdiçado**. Os 156 pontos herdados do Mac deixavam uma barra grande e vazia no topo.
-A ilha recolhida passou a medir o que mostra, somando capa, ícone de reprodução e contador de
-notificações — de 38 pontos quando ociosa até cerca de 75 com tudo visível. A altura caiu de 32
-para 26.
+Sem notch para imitar, as medidas herdadas do Mac ficavam grandes: 156 pontos de largura por 32
+de altura deixavam uma barra preta e vazia no topo. A ilha recolhida passou a **120 por 22**,
+mantendo a mesma composição — capa à esquerda, risco no meio, estado da reprodução e contador à
+direita. A altura foi escolhida para acomodar o contador de notificações, de 14 pontos, com uma
+folga pequena.
 
-`ClosedContent` carrega esse estado até a geometria, e `NotchViewModel` recalcula a cada mudança
-de mídia ou notificação. Como a animação já interpola largura e reaplica o recorte a cada quadro,
-a ilha cresce e encolhe sozinha sem código adicional.
+Chegou a existir uma versão em que a largura era medida a partir do que estava visível, indo de
+38 a 75 pontos. Funcionava, mas foi descartada por duas razões: a ilha virava um ponto pequeno
+demais para servir de alça, e mudava de tamanho sozinha sempre que uma música começava ou uma
+notificação chegava, o que é movimento no canto do olho sem que o usuário tenha pedido nada.
+Tamanho fixo é mais quieto.
 
-Duas consequências disso:
-
-- a região que responde ao ponteiro ganhou piso próprio, de 96 pontos. Mirar numa ilha de 38
-  pontos seria desconfortável, então o alvo é maior que o desenho, como já acontecia na tira;
-- o recuo superior do painel aberto passou a vir da geometria em vez de ficar cravado no XAML.
-  Ele deriva da altura recolhida, e um valor fixo teria silenciosamente desalinhado o conteúdo
-  quando essa altura mudou.
+O recuo superior do painel aberto vem da geometria em vez de ficar cravado no XAML: ele deriva
+da altura recolhida e tem piso de 30 pontos, porque os botões de ação têm 22 e precisam de folga.
+Quando a altura recolhida mudou de 32 para 22, um valor fixo teria desalinhado o conteúdo em
+silêncio.
 
 ### O recorte da janela
 
