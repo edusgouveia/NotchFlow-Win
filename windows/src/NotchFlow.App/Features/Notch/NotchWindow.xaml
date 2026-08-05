@@ -19,19 +19,19 @@
 
             <Grid>
 
-                <!-- Estado recolhido -->
-                <Grid x:Name="CollapsedContent" Padding="7,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <!-- Estado recolhido. A ilha tem largura variavel, entao os elementos
+                     ficam numa fileira centralizada em vez de posicoes fixas numa grade. -->
+                <StackPanel
+                    x:Name="CollapsedContent"
+                    Orientation="Horizontal"
+                    Spacing="5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
 
                     <Border
                         x:Name="CollapsedArtwork"
-                        Grid.Column="0"
-                        Width="18"
-                        Height="18"
+                        Width="16"
+                        Height="16"
                         CornerRadius="4"
                         VerticalAlignment="Center"
                         Visibility="Collapsed">
@@ -40,59 +40,52 @@
                         </Border.Background>
                     </Border>
 
-                    <!-- Indicador neutro quando não há capa ou quando a ilha está em modo tira. -->
+                    <FontIcon
+                        x:Name="CollapsedStatusIcon"
+                        FontFamily="Segoe Fluent Icons"
+                        FontSize="10"
+                        Glyph="&#xE768;"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed" />
+
+                    <!-- Indicador persistente de notificacoes: e o que a ilha faz que o
+                         toast nao faz, ja que o toast some e este fica. -->
+                    <Border
+                        x:Name="NotificationBadge"
+                        Height="14"
+                        MinWidth="14"
+                        CornerRadius="7"
+                        Padding="4,0"
+                        Background="#6264A7"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            x:Name="NotificationBadgeText"
+                            FontSize="9"
+                            FontWeight="SemiBold"
+                            Foreground="White"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                    </Border>
+
+                    <!-- Capsula neutra: aparece so quando nao ha mais nada a mostrar, para
+                         a ilha ociosa continuar sendo uma alca visivel. -->
                     <Border
                         x:Name="CollapsedIndicator"
-                        Grid.Column="1"
                         Width="26"
                         Height="2.5"
                         CornerRadius="1.25"
-                        HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Background="#9E9E9E" />
-
-                    <StackPanel
-                        Grid.Column="2"
-                        Orientation="Horizontal"
-                        Spacing="5"
-                        VerticalAlignment="Center">
-
-                        <!-- Indicador persistente de notificações: é o que a ilha faz que
-                             o toast não faz, já que o toast some e este fica. -->
-                        <Border
-                            x:Name="NotificationBadge"
-                            Height="14"
-                            MinWidth="14"
-                            CornerRadius="7"
-                            Padding="4,0"
-                            Background="#6264A7"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed">
-                            <TextBlock
-                                x:Name="NotificationBadgeText"
-                                FontSize="9"
-                                FontWeight="SemiBold"
-                                Foreground="White"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center" />
-                        </Border>
-
-                        <FontIcon
-                            x:Name="CollapsedStatusIcon"
-                            FontFamily="Segoe Fluent Icons"
-                            FontSize="10"
-                            Glyph="&#xE768;"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed" />
-                    </StackPanel>
-                </Grid>
+                </StackPanel>
 
                 <!-- Estado expandido -->
+                <!-- O Padding vem da geometria, em ApplyExpandedPadding: depende da altura
+                     da ilha recolhida e cravá-lo aqui deixaria os dois fora de sincronia. -->
                 <Grid
                     x:Name="ExpandedContent"
                     Opacity="0"
-                    Visibility="Collapsed"
-                    Padding="12,36,12,9">
+                    Visibility="Collapsed">
 
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="256" />
@@ -409,7 +402,6 @@
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Margin="0,-29,0,0"
                         Spacing="5">
                         <Button x:Name="CollapseButton" Style="{StaticResource IslandActionStyle}" ToolTipService.ToolTip="Recolher painel">
                             <FontIcon FontFamily="Segoe Fluent Icons" FontSize="9" Glyph="&#xE70E;" />

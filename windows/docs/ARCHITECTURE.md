@@ -72,8 +72,26 @@ telas por `CGDisplayIsBuiltin`. Nenhum PC tem notch.
 
 A resposta já estava no próprio desenho: o modo `sliver`, criado para monitores externos. No
 Windows, `DisplayKind` distingue apenas tela principal de secundária. A principal recebe a ilha
-completa, com altura fixa de 32 pixels; as secundárias recebem a tira, se a preferência estiver
-ligada. Como o Windows não tem barra de menus no topo, a ilha encosta na primeira linha da tela.
+completa; as secundárias recebem a tira, se a preferência estiver ligada. Como o Windows não tem
+barra de menus no topo, a ilha encosta na primeira linha da tela.
+
+Há uma consequência que demorou a aparecer: sem notch para imitar, **largura fixa é só espaço
+preto desperdiçado**. Os 156 pontos herdados do Mac deixavam uma barra grande e vazia no topo.
+A ilha recolhida passou a medir o que mostra, somando capa, ícone de reprodução e contador de
+notificações — de 38 pontos quando ociosa até cerca de 75 com tudo visível. A altura caiu de 32
+para 26.
+
+`ClosedContent` carrega esse estado até a geometria, e `NotchViewModel` recalcula a cada mudança
+de mídia ou notificação. Como a animação já interpola largura e reaplica o recorte a cada quadro,
+a ilha cresce e encolhe sozinha sem código adicional.
+
+Duas consequências disso:
+
+- a região que responde ao ponteiro ganhou piso próprio, de 96 pontos. Mirar numa ilha de 38
+  pontos seria desconfortável, então o alvo é maior que o desenho, como já acontecia na tira;
+- o recuo superior do painel aberto passou a vir da geometria em vez de ficar cravado no XAML.
+  Ele deriva da altura recolhida, e um valor fixo teria silenciosamente desalinhado o conteúdo
+  quando essa altura mudou.
 
 ### O recorte da janela
 

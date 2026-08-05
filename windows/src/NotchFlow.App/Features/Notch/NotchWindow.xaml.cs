@@ -25,6 +25,10 @@ public sealed partial class NotchWindow : Window
 {
     private const double AnimationFps = 60;
 
+    /// <summary>Diâmetro dos botões de ação do painel, usado para centralizá-los na faixa
+    /// superior. Precisa acompanhar o IslandActionStyle definido em App.xaml.</summary>
+    private const double IslandActionSize = 22;
+
     // Glyphs do Segoe Fluent Icons, escritos com escape porque são da área de uso privado
     // do Unicode e não sobrevivem bem como literais no arquivo-fonte.
     private const string GlyphPlay = "";
@@ -179,7 +183,10 @@ public sealed partial class NotchWindow : Window
         NotificationColumn.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         NotificationDivider.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
 
-        RenderBadge(notifications.Count, notifications.Accent);
+        // Quem decide o contador é o RenderCollapsed, junto com o resto da fileira:
+        // a cápsula neutra depende de saber se o contador está lá.
+        RenderCollapsed(_viewModel.Media.CurrentSnapshot, BrandColor(
+            _viewModel.Media.CurrentSnapshot?.Brand ?? PlaybackBrand.Neutral));
 
         if (!show)
         {
@@ -212,30 +219,6 @@ public sealed partial class NotchWindow : Window
         var overflow = notifications.Overflow;
         NotificationOverflow.Visibility = overflow > 0 ? Visibility.Visible : Visibility.Collapsed;
         NotificationOverflow.Text = overflow == 1 ? "+1 mais" : $"+{overflow} mais";
-    }
-
-    /// <summary>
-    /// Indicador na ilha recolhida. É o ponto do recurso: o toast some, este fica, e some
-    /// sozinho quando o usuário lê as mensagens no aplicativo de origem.
-    /// </summary>
-    private void RenderBadge(int count, uint accent)
-    {
-        if (count <= 0 || !_viewModel.Geometry.IncludesNotifications)
-        {
-            NotificationBadge.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        // Na tira das telas secundárias não há espaço para o contador.
-        if (_viewModel.Geometry.IsMinimized)
-        {
-            NotificationBadge.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        NotificationBadge.Visibility = Visibility.Visible;
-        NotificationBadgeText.Text = count > 9 ? "9+" : count.ToString();
-        NotificationBadge.Background = new SolidColorBrush(FromArgb(accent));
     }
 
     private static Color FromArgb(uint value) => Color.FromArgb(
@@ -277,6 +260,26 @@ public sealed partial class NotchWindow : Window
     private static double EaseInOut(double t)
         => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
 
+    /// <summary>
+    /// Faixa livre no topo do painel aberto, onde a ilha recolhida estaria.
+    ///
+    /// Vem da geometria em vez de ficar fixa no XAML: a altura da ilha recolhida mudou uma
+    /// vez e o valor cravado deixaria o conteúdo desalinhado sem ninguém perceber.
+    /// </summary>
+    private void ApplyExpandedPadding()
+    {
+        var topo = _viewModel.Geometry.ExpandedTopPadding;
+
+        ExpandedContent.Padding = new Thickness(
+            NotchGeometry.HorizontalPadding,
+            topo,
+            NotchGeometry.HorizontalPadding,
+            NotchGeometry.BottomPadding);
+
+        // As ações sobem para dentro dessa faixa, centralizadas nela.
+        IslandActions.Margin = new Thickness(0, -(topo + IslandActionSize) / 2, 0, 0);
+    }
+
     private void ApplyShape(bool immediate)
     {
         if (immediate)
@@ -290,6 +293,8 @@ public sealed partial class NotchWindow : Window
 
         var radius = _viewModel.CurrentCornerRadius;
         Island.CornerRadius = new CornerRadius(0, 0, radius, radius);
+
+        ApplyExpandedPadding();
 
         // O recorte acompanha o mesmo valor que o Border acabou de receber, então
         // a silhueta do sistema e o desenho nunca divergem durante a animação.
@@ -344,28 +349,48 @@ public sealed partial class NotchWindow : Window
         RenderExpanded(snapshot, accent);
     }
 
+    /// <summary>
+    /// Conteúdo da ilha recolhida. A largura dela vem da soma do que fica visível aqui,
+    /// calculada em <see cref="NotchGeometry"/>, então este método e a geometria precisam
+    /// concordar sobre o que aparece.
+    /// </summary>
     private void RenderCollapsed(PlaybackSnapshot? snapshot, Color accent)
     {
-        // Numa tela secundária a ilha recolhida é só a tira, sem capa nem ícone.
+        // Numa tela secundária a ilha recolhida é só a tira, sem capa, ícone nem contador.
         var isSliver = _viewModel.Geometry.IsMinimized;
         var hasMedia = snapshot is not null;
+        var hasArtwork = !isSliver && snapshot?.ArtworkData is not null;
 
-        CollapsedArtwork.Visibility = !isSliver && snapshot?.ArtworkData is not null
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        var notifications = _viewModel.Notifications;
+        var badgeCount = !isSliver && _viewModel.Geometry.IncludesNotifications
+            ? notifications.Count
+            : 0;
+
+        CollapsedArtwork.Visibility = hasArtwork ? Visibility.Visible : Visibility.Collapsed;
 
         CollapsedStatusIcon.Visibility = !isSliver && hasMedia ? Visibility.Visible : Visibility.Collapsed;
         CollapsedStatusIcon.Glyph = snapshot?.IsPlaying == true ? GlyphVolume : GlyphPause;
         CollapsedStatusIcon.Foreground = new SolidColorBrush(accent);
 
-        // O indicador só aparece quando não há capa, senão a ilha fica poluída.
-        CollapsedIndicator.Visibility = isSliver || snapshot?.ArtworkData is null
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        if (badgeCount > 0)
+        {
+            NotificationBadge.Visibility = Visibility.Visible;
+            NotificationBadgeText.Text = badgeCount > 9 ? "9+" : badgeCount.ToString();
+            NotificationBadge.Background = new SolidColorBrush(FromArgb(notifications.Accent));
+        }
+        else
+        {
+            NotificationBadge.Visibility = Visibility.Collapsed;
+        }
+
+        // A cápsula neutra é a alça de última instância: só aparece quando não há
+        // absolutamente mais nada, senão a ilha ociosa viraria um ponto invisível.
+        var temConteudo = hasArtwork || (!isSliver && hasMedia) || badgeCount > 0;
+        CollapsedIndicator.Visibility = temConteudo ? Visibility.Collapsed : Visibility.Visible;
         CollapsedIndicator.Background = new SolidColorBrush(
             hasMedia ? accent : Color.FromArgb(0x9E, 0x9E, 0x9E, 0x9E));
 
-        if (!isSliver && snapshot?.ArtworkData is { } artwork)
+        if (hasArtwork && snapshot?.ArtworkData is { } artwork)
         {
             _ = SetImageAsync(CollapsedArtworkBrush, artwork);
         }

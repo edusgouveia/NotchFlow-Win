@@ -48,11 +48,13 @@ public class NotchGeometryTests
     }
 
     [Fact]
-    public void AreaDeInteracaoDaIlhaCompletaAcompanhaOVisual()
+    public void AreaDeInteracaoDaIlhaCompletaENoMinimoOVisual()
     {
         var geometry = NotchGeometry.Make(DisplayKind.Primary, minimizeOnSecondaryDisplays: true);
 
-        Assert.Equal(geometry.ClosedWidthValue, geometry.ClosedInteractionWidth);
+        // A ilha passou a ter largura variável e pode ficar estreita, então a região de
+        // hover tem um piso próprio. A altura, encostada no topo da tela, não precisa.
+        Assert.True(geometry.ClosedInteractionWidth >= geometry.ClosedWidthValue);
         Assert.Equal(geometry.ClosedHeightValue, geometry.ClosedInteractionHeight);
     }
 
