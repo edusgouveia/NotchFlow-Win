@@ -51,14 +51,40 @@
                         VerticalAlignment="Center"
                         Background="#9E9E9E" />
 
-                    <FontIcon
-                        x:Name="CollapsedStatusIcon"
+                    <StackPanel
                         Grid.Column="2"
-                        FontFamily="Segoe Fluent Icons"
-                        FontSize="10"
-                        Glyph="&#xE768;"
-                        VerticalAlignment="Center"
-                        Visibility="Collapsed" />
+                        Orientation="Horizontal"
+                        Spacing="5"
+                        VerticalAlignment="Center">
+
+                        <!-- Indicador persistente de notificações: é o que a ilha faz que
+                             o toast não faz, já que o toast some e este fica. -->
+                        <Border
+                            x:Name="NotificationBadge"
+                            Height="14"
+                            MinWidth="14"
+                            CornerRadius="7"
+                            Padding="4,0"
+                            Background="#6264A7"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                            <TextBlock
+                                x:Name="NotificationBadgeText"
+                                FontSize="9"
+                                FontWeight="SemiBold"
+                                Foreground="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Border>
+
+                        <FontIcon
+                            x:Name="CollapsedStatusIcon"
+                            FontFamily="Segoe Fluent Icons"
+                            FontSize="10"
+                            Glyph="&#xE768;"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed" />
+                    </StackPanel>
                 </Grid>
 
                 <!-- Estado expandido -->
@@ -68,9 +94,16 @@
                     Visibility="Collapsed"
                     Padding="12,36,12,9">
 
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="256" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
                     <!-- Sem mídia -->
                     <StackPanel
                         x:Name="EmptyState"
+                        Grid.Column="0"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="6">
@@ -95,7 +128,7 @@
                     </StackPanel>
 
                     <!-- Player -->
-                    <Grid x:Name="PlayerState" Visibility="Collapsed">
+                    <Grid x:Name="PlayerState" Grid.Column="0" Visibility="Collapsed">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -259,9 +292,101 @@
                         </StackPanel>
                     </Grid>
 
+                    <!-- Divisor, presente só quando há a coluna de notificações -->
+                    <Rectangle
+                        x:Name="NotificationDivider"
+                        Grid.Column="1"
+                        Width="1"
+                        Margin="10,0"
+                        Fill="#1FFFFFFF"
+                        Visibility="Collapsed" />
+
+                    <!-- Notificações -->
+                    <Grid
+                        x:Name="NotificationColumn"
+                        Grid.Column="2"
+                        Width="192"
+                        Visibility="Collapsed">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+                            <FontIcon
+                                FontFamily="Segoe Fluent Icons"
+                                FontSize="8"
+                                Glyph="&#xE8BD;"
+                                Foreground="#6264A7"
+                                VerticalAlignment="Center" />
+                            <TextBlock
+                                x:Name="NotificationHeader"
+                                FontSize="8.5"
+                                FontWeight="SemiBold"
+                                Foreground="#6264A7"
+                                VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <ItemsControl x:Name="NotificationList" Grid.Row="1">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock
+                                            Grid.Row="0"
+                                            Grid.Column="0"
+                                            Text="{Binding Title}"
+                                            FontSize="10.5"
+                                            FontWeight="SemiBold"
+                                            Foreground="White"
+                                            TextTrimming="CharacterEllipsis"
+                                            MaxLines="1" />
+
+                                        <TextBlock
+                                            Grid.Row="0"
+                                            Grid.Column="1"
+                                            Text="{Binding Time}"
+                                            FontSize="8"
+                                            Foreground="#7A7A7A"
+                                            Margin="6,0,0,0"
+                                            VerticalAlignment="Center" />
+
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Grid.ColumnSpan="2"
+                                            Text="{Binding Body}"
+                                            FontSize="9"
+                                            Foreground="#9A9A9A"
+                                            TextWrapping="Wrap"
+                                            TextTrimming="CharacterEllipsis"
+                                            MaxLines="2" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock
+                            x:Name="NotificationOverflow"
+                            Grid.Row="2"
+                            FontSize="8.5"
+                            Foreground="#7A7A7A"
+                            Visibility="Collapsed" />
+                    </Grid>
+
                     <!-- Ações da ilha -->
                     <StackPanel
                         x:Name="IslandActions"
+                        Grid.ColumnSpan="3"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"

@@ -66,6 +66,7 @@ public sealed partial class NotchWindow : Window
 
         _viewModel.PropertyChanged += OnViewModelChanged;
         _viewModel.Media.PropertyChanged += OnMediaChanged;
+        _viewModel.Notifications.PropertyChanged += OnNotificationsChanged;
 
         WireCommands();
 
@@ -73,7 +74,12 @@ public sealed partial class NotchWindow : Window
         _animatedHeight = _viewModel.CurrentHeight;
         ApplyShape(immediate: true);
         RenderMedia();
+        RenderNotifications();
     }
+
+    /// <summary>Linha da lista de notificações. Existe porque o tempo relativo é calculado
+    /// no momento da exibição, e não cabe no modelo imutável.</summary>
+    private sealed record NotificationRow(string Title, string Body, string Time);
 
     public NotchViewModel ViewModel => _viewModel;
 
@@ -149,11 +155,81 @@ public sealed partial class NotchWindow : Window
             case nameof(NotchViewModel.Geometry):
                 ApplyShape(immediate: true);
                 RenderMedia();
+                RenderNotifications();
                 break;
         }
     }
 
     private void OnMediaChanged(object? sender, PropertyChangedEventArgs e) => RenderMedia();
+
+    private void OnNotificationsChanged(object? sender, PropertyChangedEventArgs e)
+        => RenderNotifications();
+
+    // ---------- Notificações ----------
+
+    private void RenderNotifications()
+    {
+        var notifications = _viewModel.Notifications;
+        var show = _viewModel.Geometry.IncludesNotifications && notifications.HasNotifications;
+
+        NotificationColumn.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        NotificationDivider.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+
+        RenderBadge(notifications.Count, notifications.Accent);
+
+        if (!show)
+        {
+            NotificationList.ItemsSource = null;
+            return;
+        }
+
+        var source = notifications.Visible.Count > 0 ? notifications.Visible[0].Source : "Notificações";
+        NotificationHeader.Text = notifications.Count > 1
+            ? $"{source} · {notifications.Count}"
+            : source;
+
+        var now = DateTimeOffset.Now;
+        NotificationList.ItemsSource = notifications.Visible
+            .Select(item => new NotificationRow(
+                item.HasTitle ? item.Title : item.Source,
+                item.Body,
+                item.RelativeTime(now)))
+            .ToList();
+
+        var overflow = notifications.Overflow;
+        NotificationOverflow.Visibility = overflow > 0 ? Visibility.Visible : Visibility.Collapsed;
+        NotificationOverflow.Text = overflow == 1 ? "+1 mais" : $"+{overflow} mais";
+    }
+
+    /// <summary>
+    /// Indicador na ilha recolhida. É o ponto do recurso: o toast some, este fica, e some
+    /// sozinho quando o usuário lê as mensagens no aplicativo de origem.
+    /// </summary>
+    private void RenderBadge(int count, uint accent)
+    {
+        if (count <= 0 || !_viewModel.Geometry.IncludesNotifications)
+        {
+            NotificationBadge.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        // Na tira das telas secundárias não há espaço para o contador.
+        if (_viewModel.Geometry.IsMinimized)
+        {
+            NotificationBadge.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        NotificationBadge.Visibility = Visibility.Visible;
+        NotificationBadgeText.Text = count > 9 ? "9+" : count.ToString();
+        NotificationBadge.Background = new SolidColorBrush(FromArgb(accent));
+    }
+
+    private static Color FromArgb(uint value) => Color.FromArgb(
+        (byte)((value >> 24) & 0xFF),
+        (byte)((value >> 16) & 0xFF),
+        (byte)((value >> 8) & 0xFF),
+        (byte)(value & 0xFF));
 
     // ---------- Forma ----------
 
@@ -531,5 +607,6 @@ public sealed partial class NotchWindow : Window
         _progressTimer.Stop();
         _viewModel.PropertyChanged -= OnViewModelChanged;
         _viewModel.Media.PropertyChanged -= OnMediaChanged;
+        _viewModel.Notifications.PropertyChanged -= OnNotificationsChanged;
     }
 }

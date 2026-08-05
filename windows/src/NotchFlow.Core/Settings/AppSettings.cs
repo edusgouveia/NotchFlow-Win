@@ -16,6 +16,16 @@ public sealed class AppSettingsData
 
     [JsonPropertyName("showOnAllDisplays")]
     public bool ShowOnAllDisplays { get; set; } = true;
+
+    /// <summary>Desligado por padrão: o acesso às notificações é uma permissão ampla e
+    /// deve ser uma escolha consciente, não algo que acontece na primeira execução.</summary>
+    [JsonPropertyName("notificationsEnabled")]
+    public bool NotificationsEnabled { get; set; }
+
+    /// <summary>Desligado por padrão: o Windows já mostra um toast para o mesmo evento, e
+    /// abrir a ilha por cima disso duplicaria o aviso no ponto mais chamativo da tela.</summary>
+    [JsonPropertyName("autoExpandOnNotification")]
+    public bool AutoExpandOnNotification { get; set; }
 }
 
 /// <summary>
@@ -34,6 +44,10 @@ public sealed class AppSettings
     /// <summary>O ícone da bandeja tem um evento próprio porque quem reage é o host do
     /// aplicativo, não a geometria das janelas.</summary>
     public event EventHandler<bool>? TrayIconVisibilityChanged;
+
+    /// <summary>Ligar as notificações dispara o pedido de permissão ao Windows, que é
+    /// responsabilidade do host e não das janelas.</summary>
+    public event EventHandler<bool>? NotificationsEnabledChanged;
 
     public AppSettings(string? path = null)
     {
@@ -71,6 +85,31 @@ public sealed class AppSettings
     {
         get => _data.ShowOnAllDisplays;
         set => Update(v => _data.ShowOnAllDisplays = v, value, _data.ShowOnAllDisplays);
+    }
+
+    /// <summary>Acompanhar as notificações do Teams na ilha.</summary>
+    public bool NotificationsEnabled
+    {
+        get => _data.NotificationsEnabled;
+        set
+        {
+            if (_data.NotificationsEnabled == value)
+            {
+                return;
+            }
+
+            _data.NotificationsEnabled = value;
+            Save();
+            NotificationsEnabledChanged?.Invoke(this, value);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>Abrir a ilha sozinha por alguns segundos quando chega uma notificação.</summary>
+    public bool AutoExpandOnNotification
+    {
+        get => _data.AutoExpandOnNotification;
+        set => Update(v => _data.AutoExpandOnNotification = v, value, _data.AutoExpandOnNotification);
     }
 
     private void Update(Action<bool> apply, bool value, bool current)

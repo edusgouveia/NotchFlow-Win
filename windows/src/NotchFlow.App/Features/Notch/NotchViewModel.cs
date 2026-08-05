@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using NotchFlow.Core.Media;
 using NotchFlow.Core.Models;
+using NotchFlow.Core.Notifications;
 using NotchFlow.Core.Settings;
 
 namespace NotchFlow.App.Features.Notch;
@@ -43,15 +44,31 @@ public sealed class NotchViewModel : INotifyPropertyChanged
     /// <summary>Disparado quando a silhueta muda de tamanho, para a janela recortar de novo.</summary>
     public event EventHandler? ShapeChanged;
 
-    public NotchViewModel(MediaCoordinator media, AppSettings settings, DisplayKind displayKind)
+    public NotchViewModel(
+        MediaCoordinator media,
+        NotificationCoordinator notifications,
+        AppSettings settings,
+        DisplayKind displayKind)
     {
         Media = media;
+        Notifications = notifications;
         _settings = settings;
         DisplayKind = displayKind;
-        _geometry = NotchGeometry.Make(displayKind, settings.MinimizeOnSecondaryDisplays);
+        _geometry = BuildGeometry();
+
+        // A coluna aparece e some conforme há notificações, então a geometria acompanha.
+        Notifications.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(NotificationCoordinator.HasNotifications))
+            {
+                ApplySettings();
+            }
+        };
     }
 
     public MediaCoordinator Media { get; }
+
+    public NotificationCoordinator Notifications { get; }
 
     public DisplayKind DisplayKind { get; }
 
@@ -120,12 +137,17 @@ public sealed class NotchViewModel : INotifyPropertyChanged
 
     public void ApplySettings()
     {
-        Geometry = NotchGeometry.Make(DisplayKind, _settings.MinimizeOnSecondaryDisplays);
+        Geometry = BuildGeometry();
         if (Geometry.IsMinimized && IsExpanded)
         {
             SetExpanded(false);
         }
     }
+
+    private NotchGeometry BuildGeometry() => NotchGeometry.Make(
+        DisplayKind,
+        _settings.MinimizeOnSecondaryDisplays,
+        includesNotifications: _settings.NotificationsEnabled && Notifications.HasNotifications);
 
     public void Toggle() => SetExpanded(!IsExpanded);
 

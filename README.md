@@ -35,12 +35,36 @@ referência da arquitetura e do desenho.
 | Música | Capa, faixa, artista, progresso, play/pause, anterior, próxima e avanço ou retorno de 15 segundos. |
 | Fontes | Qualquer player registrado no Windows: Spotify, Apple Music, VLC, foobar2000, MusicBee e outros. |
 | Navegador | YouTube, YouTube Music, SoundCloud, Spotify Web e qualquer site com `mediaSession`, no Edge, Chrome, Firefox, Brave, Opera e Vivaldi. |
+| Notificações | Indicador persistente do Teams na ilha, com contador, e a lista de quem escreveu no painel. Desligado por padrão. |
 | Monitores | Ilha na tela principal e tira discreta nas demais, com painel independente em cada uma. |
 | Controles | Barra de progresso arrastável, além dos saltos de 15 segundos. |
 | Sistema | Aplicativo residente, sem janela e fora do Alt+Tab, com ícone na bandeja e opção de iniciar junto com o Windows. |
 
 Os controles disponíveis acompanham o que cada player declara: um serviço que não permite pular
 faixa deixa esses botões esmaecidos, em vez de oferecer uma ação que não funciona.
+
+## Notificações do Teams
+
+A ilha acompanha as notificações do Teams e mostra um indicador discreto com o número de
+mensagens esperando. Ao passar o mouse, o painel lista quem escreveu e a prévia.
+
+**A ilha não se abre sozinha por padrão**, e isso é deliberado. O Windows já mostra um toast
+para a mesma mensagem, e abrir a ilha por cima duplicaria o aviso no ponto mais chamativo da
+tela. O que a ilha faz que o toast não faz é *permanecer*: o toast some e você perde, o
+indicador fica até você ler no Teams, e some sozinho quando você lê.
+
+Quem preferir o outro comportamento pode ligar **Abrir a ilha ao receber** no menu da bandeja:
+a ilha abre por 5 segundos e recolhe. Se você levar o mouse até ela nesse intervalo, ela para
+de se fechar e passa a obedecer o hover.
+
+### Para ativar
+
+1. Botão direito no ícone da bandeja, marque **Notificações do Teams na ilha**.
+2. Autorize o NotchFlow quando o Windows pedir, em Privacidade e Segurança, Notificações.
+3. No Teams, em Configurações, Notificações, escolha o estilo **Windows**. Com o estilo interno
+   do Teams as mensagens não passam pelo sistema e nada é visto.
+
+O recurso vem desligado porque a permissão é ampla, como explicado abaixo.
 
 ## O que ainda não existe
 
@@ -81,19 +105,39 @@ Para dispensar o runtime, gere um pacote autocontido com `./Scripts/build.ps1 -S
 
 O NotchFlow não possui servidor, conta, banco de dados ou telemetria.
 
-- os metadados vêm do próprio Windows, pelo SMTC, e permanecem em memória;
+- os metadados de mídia vêm do próprio Windows, pelo SMTC, e permanecem em memória;
 - as capas chegam prontas do sistema, sem download pela rede;
 - **o aplicativo não faz nenhuma requisição de rede**;
-- o log local registra apenas eventos do próprio aplicativo, nunca o que você ouviu;
-- as preferências são três interruptores em `%APPDATA%\NotchFlow\settings.json`.
+- o log local registra apenas eventos do próprio aplicativo, nunca o que você ouviu nem quem
+  lhe escreveu;
+- as preferências ficam em `%APPDATA%\NotchFlow\settings.json`.
 
 ## Permissões utilizadas
 
-Nenhuma. O SMTC é uma API pública que não exige consentimento, e o início automático usa a chave
-`Run` do usuário atual, sem privilégio de administrador.
+| Permissão | Quando | O que o app faz |
+| --- | --- | --- |
+| Nenhuma | Mídia e início automático | O SMTC é uma API pública sem consentimento, e o início automático usa a chave `Run` do usuário, sem privilégio de administrador. |
+| Acesso às notificações | Só se você ligar as notificações do Teams | Leitura local, sem rede. |
 
-Isso é uma vantagem sobre a versão macOS, que precisa de autorização de Automação para cada
-player e da opção "Permitir JavaScript de Apple Events" nos navegadores.
+Para mídia, isso continua sendo uma vantagem sobre a versão macOS, que precisa de autorização de
+Automação para cada player e da opção "Permitir JavaScript de Apple Events" nos navegadores.
+
+### Sobre o acesso às notificações
+
+Vale ser direto: a API do Windows **não permite pedir só o Teams**. A permissão dá acesso às
+notificações de todos os aplicativos, inclusive banco e e-mail pessoal.
+
+O que o NotchFlow faz com isso:
+
+- o filtro por aplicativo é aplicado **durante a leitura**, em
+  [`NotificationSourceCatalog`](windows/src/NotchFlow.Core/Notifications/NotificationSourceCatalog.cs).
+  O que não for do Teams é descartado antes de virar um objeto em memória;
+- nada é gravado em disco, nem no log;
+- nada sai da máquina, porque o aplicativo não acessa a rede;
+- o recurso vem **desligado**, e ligá-lo é uma escolha explícita no menu da bandeja.
+
+Ainda assim, é uma permissão ampla. Se isso incomodar, deixe o recurso desligado: o resto do
+NotchFlow funciona sem ele.
 
 ## Desenvolvimento
 
@@ -134,9 +178,13 @@ flowchart LR
     UI["WinUI 3 · NotchWindow"] --> VM["NotchViewModel"]
     UI --> WIN32["Win32 · recorte e estilos"]
     VM --> MEDIA["MediaCoordinator"]
+    VM --> NOTIF["NotificationCoordinator"]
     MEDIA --> SMTC["SystemMediaService"]
     SMTC --> WINRT["Windows.Media.Control"]
     WINRT --> PLAYERS["Spotify · Navegadores · VLC"]
+    NOTIF --> NSVC["SystemNotificationService"]
+    NSVC --> LISTENER["UserNotificationListener"]
+    LISTENER --> TEAMS["Teams"]
     APP["App"] --> TRAY["TrayIconService"]
     APP --> LOGIN["LaunchAtLoginService"]
 ```

@@ -30,6 +30,7 @@ public sealed record NotchGeometry
     public const double ExpandedContentHeight = 142;
     public const double MediaColumnWidth = 256;
     public const double CalendarColumnWidth = 176;
+    public const double NotificationColumnWidth = 192;
     public const double ColumnSpacing = 10;
     public const double HorizontalPadding = 12;
     public const double BottomPadding = 9;
@@ -61,10 +62,19 @@ public sealed record NotchGeometry
     /// a ilha expande só com a coluna de mídia em vez de abrir um espaço vazio.</summary>
     public required bool IncludesCalendar { get; init; }
 
+    /// <summary>A coluna de notificações aparece só quando há algo a mostrar, para a ilha
+    /// ociosa continuar compacta em vez de reservar um espaço vazio permanente.</summary>
+    public required bool IncludesNotifications { get; init; }
+
     public double ExpandedWidth =>
         HorizontalPadding * 2
         + MediaColumnWidth
-        + (IncludesCalendar ? ColumnSpacing * 2 + DividerWidth + CalendarColumnWidth : 0);
+        + Column(IncludesNotifications, NotificationColumnWidth)
+        + Column(IncludesCalendar, CalendarColumnWidth);
+
+    /// <summary>Largura que uma coluna extra acrescenta, já com o espaçamento e o divisor.</summary>
+    private static double Column(bool present, double width)
+        => present ? ColumnSpacing * 2 + DividerWidth + width : 0;
 
     public double ExpandedHeight => ExpandedContentHeight + ExpandedTopPadding + BottomPadding;
 
@@ -87,7 +97,8 @@ public sealed record NotchGeometry
     public static NotchGeometry Make(
         DisplayKind displayKind,
         bool minimizeOnSecondaryDisplays,
-        bool includesCalendar = false)
+        bool includesCalendar = false,
+        bool includesNotifications = false)
     {
         if (displayKind == DisplayKind.Secondary && minimizeOnSecondaryDisplays)
         {
@@ -98,7 +109,8 @@ public sealed record NotchGeometry
                 ClosedWidthValue = SliverWidth,
                 ClosedHeightValue = SliverHeight,
                 ExpandedTopPadding = SecondaryTopPadding,
-                IncludesCalendar = includesCalendar
+                IncludesCalendar = includesCalendar,
+                IncludesNotifications = includesNotifications
             };
         }
 
@@ -113,7 +125,8 @@ public sealed record NotchGeometry
             ClosedWidthValue = ClosedWidth,
             ClosedHeightValue = height,
             ExpandedTopPadding = height + 4,
-            IncludesCalendar = includesCalendar
+            IncludesCalendar = includesCalendar,
+            IncludesNotifications = includesNotifications
         };
     }
 }

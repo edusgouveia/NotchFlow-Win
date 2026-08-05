@@ -5,8 +5,10 @@ namespace NotchFlow.Core.Logging;
 
 /// <summary>
 /// Log local por categoria, equivalente ao OSLog usado na versão macOS.
-/// Nunca registra metadados de mídia nem de calendário: só eventos do próprio aplicativo,
-/// para o arquivo não virar um histórico do que o usuário ouviu.
+///
+/// Nunca registra conteúdo: nem metadados de mídia, nem remetente ou texto de notificação.
+/// Só eventos do próprio aplicativo, para o arquivo não virar um histórico do que o usuário
+/// ouviu ou de quem lhe escreveu.
 /// </summary>
 public sealed class AppLog
 {
@@ -14,6 +16,7 @@ public sealed class AppLog
     public static readonly AppLog Media = new("media");
     public static readonly AppLog Window = new("window");
     public static readonly AppLog Calendar = new("calendar");
+    public static readonly AppLog Notifications = new("notifications");
 
     private const long MaxFileBytes = 512 * 1024;
 

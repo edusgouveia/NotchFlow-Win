@@ -31,6 +31,9 @@ externa e separação clara entre apresentação, estado e serviços do sistema.
 | `MediaCoordinator` | Escuta o serviço de mídia, escolhe a sessão ativa e executa comandos. |
 | `SystemMediaService` | Lê e controla a mídia do sistema pelo SMTC. |
 | `MediaSourceCatalog` | Traduz o AppUserModelId em nome legível e marca visual. |
+| `NotificationCoordinator` | Mantém a lista e o contador, e avisa quando chega algo inédito. |
+| `SystemNotificationService` | Lê a Central de Ações pela `UserNotificationListener`. |
+| `NotificationSourceCatalog` | Define quais aplicativos a ilha acompanha. É o filtro de privacidade. |
 | `PlaybackSelector` | Decide qual sessão aparece quando há mais de um player. Porte direto. |
 | `NotchGeometry` | Valor puro com os tamanhos recolhido e expandido. Porte direto. |
 | `AppSettings` | Preferências em JSON, em `%APPDATA%\NotchFlow`. |
@@ -110,6 +113,63 @@ borda clara fique fora da tela. O recuo é medido em tempo de execução, não f
 - A barra de progresso é desenhada à mão. O `Slider` padrão traz um polegar grande demais e um
   traço grosso que não combinam com a ilha, e restilizá-lo custaria mais que desenhá-lo.
 
+## Notificações
+
+Recurso que não existe na versão macOS. Nasceu do pedido de "abrir a ilha quando chegar
+mensagem do Teams", mas foi implementado de outra forma, pelo motivo descrito abaixo.
+
+### Por que a ilha não abre sozinha por padrão
+
+Para a API funcionar, o Teams precisa estar configurado com o estilo de notificação do Windows.
+Ou seja, **o usuário já recebe o toast nativo**. Abrir a ilha por cima disso entrega o mesmo
+aviso duas vezes, sendo a segunda no ponto de maior roubo de atenção da tela.
+
+Além disso, contraria o desenho que o projeto já tinha: quando a música muda, a ilha não se
+abre, mostra uma cápsula colorida. Ela é ambiente, não intrusiva.
+
+O que a ilha faz que o toast não faz é **permanecer**. O toast é efêmero; o indicador fica até
+a mensagem ser lida. É nisso que o recurso se apoia.
+
+O comportamento pedido originalmente existe como preferência opcional,
+`AutoExpandOnNotification`, desligada por padrão.
+
+### Contagem que se corrige sozinha
+
+A `UserNotificationListener` não entrega só o evento de chegada: entrega a **lista atual** da
+Central de Ações. Então o contador é simplesmente quantas notificações do Teams estão lá.
+
+Quando o usuário lê as mensagens no Teams, o próprio Teams remove os toasts, e o contador cai
+sem o NotchFlow precisar rastrear leitura. Não há estado a sincronizar.
+
+O `NotificationCoordinator` guarda os ids já vistos para distinguir uma chegada nova de uma
+releitura da mesma lista. Ids que somem da Central são esquecidos, o que evita o conjunto
+crescer para sempre e permite avisar de novo se a mesma notificação voltar.
+
+A primeira leitura apenas registra o que já estava lá: sem isso, abrir o NotchFlow com mensagens
+acumuladas dispararia um aviso para cada uma.
+
+### Duas descobertas sobre a API
+
+**Funciona sem identidade de pacote.** A expectativa era que a capability
+`userNotificationListener` exigisse um manifesto MSIX, o que obrigaria a empacotar e assinar o
+aplicativo. Um spike mostrou que `RequestAccessAsync` devolve `Allowed` num .exe solto. O
+NotchFlow continua sendo baixar, descompactar e executar.
+
+**O evento `NotificationChanged` não funciona sem identidade de pacote.** A assinatura lança
+`COMException`. Por isso o coordenador trata o evento como um bônus e se apoia numa consulta a
+cada 4 segundos, o mesmo padrão de rede de segurança usado no coordenador de mídia.
+
+### Privacidade
+
+A API entrega as notificações de todos os aplicativos: não há como pedir só o Teams.
+
+O `NotificationSourceCatalog` é aplicado **durante** a leitura, em
+`SystemNotificationService.TryConvert`: o que não casa é descartado antes de o texto ser
+extraído. O que não é do Teams não chega a existir como objeto.
+
+Nada é gravado em disco, nem no log, e o aplicativo não acessa a rede. O recurso vem desligado
+e ligá-lo é uma escolha explícita.
+
 ## Abertura e fechamento
 
 Igual ao macOS, em duas etapas controladas por `NotchViewModel.SetExpanded`:
@@ -136,9 +196,11 @@ evita manter uma janela de mensagens só para receber `WM_DISPLAYCHANGE`.
 
 ## Persistência
 
-`AppSettings` grava três interruptores em `%APPDATA%\NotchFlow\settings.json`: reduzir nas telas
-secundárias, mostrar em todas as telas e mostrar o ícone da bandeja. O início automático pertence
-ao Windows, na chave `Run`. Metadados, capas e posições ficam só em memória.
+`AppSettings` grava cinco interruptores em `%APPDATA%\NotchFlow\settings.json`: reduzir nas telas
+secundárias, mostrar em todas as telas, mostrar o ícone da bandeja, acompanhar as notificações e
+abrir a ilha ao receber. O início automático pertence ao Windows, na chave `Run`.
+
+Metadados de mídia, capas, notificações e posições ficam só em memória.
 
 Um arquivo de preferências corrompido volta ao padrão em vez de impedir a abertura.
 

@@ -4,6 +4,7 @@ using NotchFlow.App.Interop;
 using NotchFlow.Core.Logging;
 using NotchFlow.Core.Media;
 using NotchFlow.Core.Models;
+using NotchFlow.Core.Notifications;
 using NotchFlow.Core.Settings;
 using Windows.Graphics;
 
@@ -31,9 +32,14 @@ public sealed class NotchWindowController : IDisposable
         public bool PointerInside { get; set; }
         public DateTimeOffset? PendingSince { get; set; }
         public bool PendingTarget { get; set; }
+
+        /// <summary>Instante em que uma abertura automática deve se desfazer. Nulo quando a
+        /// ilha não foi aberta por notificação.</summary>
+        public DateTimeOffset? FlashUntil { get; set; }
     }
 
     private readonly MediaCoordinator _media;
+    private readonly NotificationCoordinator _notifications;
     private readonly AppSettings _settings;
     private readonly DispatcherQueueTimer _pointerTimer;
     private readonly List<DisplayContext> _contexts = [];
@@ -41,9 +47,14 @@ public sealed class NotchWindowController : IDisposable
     private int _tickCounter;
     private bool _disposed;
 
-    public NotchWindowController(MediaCoordinator media, AppSettings settings, DispatcherQueue queue)
+    public NotchWindowController(
+        MediaCoordinator media,
+        NotificationCoordinator notifications,
+        AppSettings settings,
+        DispatcherQueue queue)
     {
         _media = media;
+        _notifications = notifications;
         _settings = settings;
 
         _pointerTimer = queue.CreateTimer();
@@ -91,6 +102,29 @@ public sealed class NotchWindowController : IDisposable
         }
 
         context.ViewModel.Toggle();
+        context.Window.BringToTop();
+    }
+
+    /// <summary>
+    /// Abre a ilha por alguns segundos por causa de uma notificação, e a recolhe sozinha.
+    ///
+    /// Abre em uma tela só, a que está sob o cursor, senão as três abririam ao mesmo tempo.
+    /// O fechamento é resolvido no próprio ciclo do ponteiro, então se o usuário levar o
+    /// mouse até a ilha nesse intervalo ela deixa de se fechar e passa a obedecer o hover.
+    /// </summary>
+    public void FlashForNotification(TimeSpan duration)
+    {
+        var context = ContextUnderPointer()
+            ?? _contexts.FirstOrDefault(c => c.ViewModel.DisplayKind == DisplayKind.Primary)
+            ?? _contexts.FirstOrDefault();
+
+        if (context is null)
+        {
+            return;
+        }
+
+        context.FlashUntil = DateTimeOffset.Now + duration;
+        context.ViewModel.SetExpanded(true);
         context.Window.BringToTop();
     }
 
@@ -153,7 +187,7 @@ public sealed class NotchWindowController : IDisposable
 
     private DisplayContext CreateContext(RectInt32 bounds, string key, DisplayKind kind)
     {
-        var viewModel = new NotchViewModel(_media, _settings, kind);
+        var viewModel = new NotchViewModel(_media, _notifications, _settings, kind);
         var window = new NotchWindow(viewModel);
 
         window.Activate();
@@ -193,6 +227,24 @@ public sealed class NotchWindowController : IDisposable
         {
             var inside = IsPointerInside(context, point);
             UpdatePointerState(context, inside, now);
+            ExpireFlash(context, now);
+        }
+    }
+
+    /// <summary>Desfaz uma abertura automática, a menos que o cursor tenha entrado na ilha
+    /// nesse meio tempo. Nesse caso quem manda passa a ser a histerese do ponteiro.</summary>
+    private static void ExpireFlash(DisplayContext context, DateTimeOffset now)
+    {
+        if (context.FlashUntil is not { } until || now < until)
+        {
+            return;
+        }
+
+        context.FlashUntil = null;
+
+        if (!context.PointerInside)
+        {
+            context.ViewModel.SetExpanded(false);
         }
     }
 
