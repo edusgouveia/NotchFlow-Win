@@ -372,6 +372,10 @@ public sealed partial class NotchWindow : Window
         }
     }
 
+    /// <summary>Último destino pedido para cada elemento em transição. É o que decide se
+    /// um esmaecimento que termina ainda tem o direito de esconder o elemento.</summary>
+    private readonly Dictionary<FrameworkElement, double> _fadeTargets = [];
+
     /// <summary>
     /// Transição de opacidade que também cuida da visibilidade: o elemento aparece antes de
     /// clarear e só é recolhido depois de escurecer por completo. Sem isso, esconder no
@@ -379,10 +383,12 @@ public sealed partial class NotchWindow : Window
     ///
     /// A opacidade é animada pelo compositor, então não custa quadro na thread de interface.
     /// </summary>
-    private static void FadeTo(FrameworkElement element, double opacity, TimeSpan duration)
+    private void FadeTo(FrameworkElement element, double opacity, TimeSpan duration)
     {
-        var aparecendo = opacity > 0;
+        // Registrado antes de começar: o Completed de uma transição anterior consulta isto.
+        _fadeTargets[element] = opacity;
 
+        var aparecendo = opacity > 0;
         if (aparecendo)
         {
             element.Visibility = Visibility.Visible;
@@ -407,8 +413,13 @@ public sealed partial class NotchWindow : Window
         {
             storyboard.Completed += (_, _) =>
             {
-                // Uma transição mais recente pode ter mandado o elemento reaparecer.
-                if (element.Opacity <= 0)
+                // Consultar o destino, e não a opacidade atual, é o que importa aqui.
+                //
+                // Se o cursor voltar durante o esmaecimento, um clareamento novo começa e
+                // este Completed ainda dispara. Perguntando "a opacidade está em zero?" a
+                // resposta seria sim, porque o clareamento mal saiu do zero, e o painel
+                // seria escondido no meio da própria reabertura, ficando todo preto.
+                if (_fadeTargets.TryGetValue(element, out var destino) && destino <= 0)
                 {
                     element.Visibility = Visibility.Collapsed;
                 }
