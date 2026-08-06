@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using NotchFlow.App.Interop;
+using NotchFlow.Core.Logging;
 using NotchFlow.Core.Models;
 using Windows.Graphics;
 using Windows.Storage.Streams;
@@ -23,8 +24,6 @@ namespace NotchFlow.App.Features.Notch;
 /// </summary>
 public sealed partial class NotchWindow : Window
 {
-    private const double AnimationFps = 60;
-
     /// <summary>Diâmetro dos botões de ação do painel, usado para centralizá-los na faixa
     /// superior. Precisa acompanhar o IslandActionStyle definido em App.xaml.</summary>
     private const double IslandActionSize = 22;
@@ -36,8 +35,10 @@ public sealed partial class NotchWindow : Window
     private const string GlyphVolume = "";
 
     private readonly NotchViewModel _viewModel;
-    private readonly DispatcherQueueTimer _animationTimer;
     private readonly DispatcherQueueTimer _progressTimer;
+
+    private readonly System.Diagnostics.Stopwatch _animationClock = new();
+    private bool _animating;
 
     private IntPtr _hwnd;
     private double _animatedWidth;
@@ -60,10 +61,6 @@ public sealed partial class NotchWindow : Window
         ConfigureWindow();
 
         var queue = DispatcherQueue.GetForCurrentThread();
-        _animationTimer = queue.CreateTimer();
-        _animationTimer.Interval = TimeSpan.FromMilliseconds(1000 / AnimationFps);
-        _animationTimer.Tick += OnAnimationTick;
-
         _progressTimer = queue.CreateTimer();
         _progressTimer.Interval = TimeSpan.FromSeconds(1);
         _progressTimer.Tick += (_, _) => UpdateProgress();
@@ -236,29 +233,73 @@ public sealed partial class NotchWindow : Window
         _animationTo = _viewModel.CurrentWidth;
         _animationToHeight = _viewModel.CurrentHeight;
         _animationProgress = 0;
-        _animationTimer.Start();
+
+        _animationClock.Restart();
+
+        if (_animating)
+        {
+            return;
+        }
+
+        // CompositionTarget.Rendering dispara junto com os quadros do compositor, em vez
+        // de num timer que acorda quando dá. O ritmo fica igual ao da tela.
+        _animating = true;
+        CompositionTarget.Rendering += OnAnimationFrame;
     }
 
-    private void OnAnimationTick(DispatcherQueueTimer sender, object args)
+    private void OnAnimationFrame(object? sender, object args)
     {
-        _animationProgress += (1000.0 / AnimationFps) / NotchAnimation.ShapeDuration.TotalMilliseconds;
-
-        if (_animationProgress >= 1)
-        {
-            _animationProgress = 1;
-            _animationTimer.Stop();
-        }
+        // O progresso vem do relógio, não da contagem de quadros. Assumindo 16,7 ms por
+        // tique, um quadro atrasado esticava a animação em vez de ser compensado, e era
+        // isso que fazia o movimento parecer irregular.
+        var decorrido = _animationClock.Elapsed.TotalMilliseconds;
+        _animationProgress = Math.Clamp(
+            decorrido / NotchAnimation.ShapeDuration.TotalMilliseconds, 0, 1);
 
         var eased = EaseInOut(_animationProgress);
         _animatedWidth = _animationFrom + (_animationTo - _animationFrom) * eased;
         _animatedHeight = _animationFromHeight + (_animationToHeight - _animationFromHeight) * eased;
 
         ApplyShape(immediate: false);
+
+        if (_animationProgress >= 1)
+        {
+            StopShapeAnimation();
+        }
     }
 
-    /// <summary>Curva suave equivalente à <c>Animation.smooth</c> usada no SwiftUI.</summary>
+    private void StopShapeAnimation()
+    {
+        if (!_animating)
+        {
+            return;
+        }
+
+        _animating = false;
+        CompositionTarget.Rendering -= OnAnimationFrame;
+        _animationClock.Stop();
+    }
+
+    /// <summary>Rigidez da mola. Mais alto acelera a partida e encurta o assentamento.</summary>
+    private const double SpringStiffness = 8;
+
+    /// <summary>Normaliza a curva para chegar exatamente em 1 no fim do tempo.</summary>
+    private static readonly double SpringNormalizer =
+        1 - (1 + SpringStiffness) * Math.Exp(-SpringStiffness);
+
+    /// <summary>
+    /// Mola criticamente amortecida, equivalente ao <c>Animation.smooth(extraBounce: 0)</c>
+    /// do SwiftUI que a versão macOS usa.
+    ///
+    /// Substitui uma cúbica simétrica, que começava devagar e por isso fazia a ilha parecer
+    /// preguiçosa ao responder ao cursor. A mola arranca rápido e assenta de leve, sem
+    /// ultrapassar o destino.
+    /// </summary>
     private static double EaseInOut(double t)
-        => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+    {
+        var k = SpringStiffness * t;
+        return (1 - (1 + k) * Math.Exp(-k)) / SpringNormalizer;
+    }
 
     /// <summary>
     /// Faixa livre no topo do painel aberto, onde a ilha recolhida estaria.
@@ -305,11 +346,20 @@ public sealed partial class NotchWindow : Window
     {
         var showsContent = _viewModel.ShowsContent;
 
-        ExpandedContent.Visibility = showsContent ? Visibility.Visible : Visibility.Collapsed;
-        CollapsedContent.Visibility = _viewModel.IsExpanded ? Visibility.Collapsed : Visibility.Visible;
-
-        FadeTo(ExpandedContent, showsContent ? 1 : 0,
+        FadeTo(
+            ExpandedContent,
+            showsContent ? 1 : 0,
             showsContent ? NotchAnimation.ContentInDuration : NotchAnimation.ContentOutDuration);
+
+        // O conteúdo recolhido também transita. Antes ele sumia de uma vez no instante em
+        // que a ilha começava a abrir, e esse corte seco era o que mais destoava do resto
+        // do movimento.
+        FadeTo(
+            CollapsedContent,
+            _viewModel.IsExpanded ? 0 : 1,
+            _viewModel.IsExpanded
+                ? NotchAnimation.ContentOutDuration
+                : NotchAnimation.ContentInDuration);
 
         if (showsContent)
         {
@@ -322,19 +372,49 @@ public sealed partial class NotchWindow : Window
         }
     }
 
-    private static void FadeTo(UIElement element, double opacity, TimeSpan duration)
+    /// <summary>
+    /// Transição de opacidade que também cuida da visibilidade: o elemento aparece antes de
+    /// clarear e só é recolhido depois de escurecer por completo. Sem isso, esconder no
+    /// início da animação produz o corte seco que a transição existe para evitar.
+    ///
+    /// A opacidade é animada pelo compositor, então não custa quadro na thread de interface.
+    /// </summary>
+    private static void FadeTo(FrameworkElement element, double opacity, TimeSpan duration)
     {
+        var aparecendo = opacity > 0;
+
+        if (aparecendo)
+        {
+            element.Visibility = Visibility.Visible;
+        }
+
         var animation = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
         {
             To = opacity,
             Duration = new Duration(duration),
-            EnableDependentAnimation = true
+            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase
+            {
+                EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut
+            }
         };
 
         var storyboard = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
         Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(animation, element);
         Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(animation, "Opacity");
         storyboard.Children.Add(animation);
+
+        if (!aparecendo)
+        {
+            storyboard.Completed += (_, _) =>
+            {
+                // Uma transição mais recente pode ter mandado o elemento reaparecer.
+                if (element.Opacity <= 0)
+                {
+                    element.Visibility = Visibility.Collapsed;
+                }
+            };
+        }
+
         storyboard.Begin();
     }
 
@@ -636,7 +716,7 @@ public sealed partial class NotchWindow : Window
 
     public void Teardown()
     {
-        _animationTimer.Stop();
+        StopShapeAnimation();
         _progressTimer.Stop();
         _viewModel.PropertyChanged -= OnViewModelChanged;
         _viewModel.Media.PropertyChanged -= OnMediaChanged;
