@@ -28,18 +28,35 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Border
-                        x:Name="CollapsedArtwork"
+                    <!-- Capa e estado da reprodução andam juntos à esquerda. Com o ícone à
+                         direita, o grupo do contador chegava ao meio da ilha e encostava no
+                         risco: não sobrava folga nenhuma entre os dois. -->
+                    <StackPanel
                         Grid.Column="0"
-                        Width="14"
-                        Height="14"
-                        CornerRadius="3"
-                        VerticalAlignment="Center"
-                        Visibility="Collapsed">
-                        <Border.Background>
-                            <ImageBrush x:Name="CollapsedArtworkBrush" Stretch="UniformToFill" />
-                        </Border.Background>
-                    </Border>
+                        Orientation="Horizontal"
+                        Spacing="4"
+                        VerticalAlignment="Center">
+
+                        <Border
+                            x:Name="CollapsedArtwork"
+                            Width="14"
+                            Height="14"
+                            CornerRadius="3"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                            <Border.Background>
+                                <ImageBrush x:Name="CollapsedArtworkBrush" Stretch="UniformToFill" />
+                            </Border.Background>
+                        </Border>
+
+                        <FontIcon
+                            x:Name="CollapsedStatusIcon"
+                            FontFamily="Segoe Fluent Icons"
+                            FontSize="9"
+                            Glyph="&#xE768;"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed" />
+                    </StackPanel>
 
                     <!-- O risco atravessa as tres colunas e se centraliza no conjunto, nao
                          na coluna do meio. Preso a coluna, ele saia do centro conforme o
@@ -54,50 +71,36 @@
                         VerticalAlignment="Center"
                         Background="#9E9E9E" />
 
+                    <!-- Indicador persistente de notificacoes: e o que a ilha faz que o
+                         toast nao faz, ja que o toast some e este fica. -->
+                    <!-- Altura fixa para o ponto e o numero se centralizarem cada um por
+                         si. Sem ela, a margem de ajuste do numero aumentava a altura do
+                         conjunto e arrastava o ponto junto, o que impedia acertar os dois. -->
                     <StackPanel
+                        x:Name="NotificationBadge"
                         Grid.Column="2"
                         Orientation="Horizontal"
                         Spacing="4"
+                        Height="15"
                         Margin="0,0,4,0"
-                        VerticalAlignment="Center">
-
-                        <FontIcon
-                            x:Name="CollapsedStatusIcon"
-                            FontFamily="Segoe Fluent Icons"
-                            FontSize="9"
-                            Glyph="&#xE768;"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed" />
-
-                        <!-- Indicador persistente de notificacoes: e o que a ilha faz que o
-                             toast nao faz, ja que o toast some e este fica. -->
-                        <!-- Altura fixa para o ponto e o numero se centralizarem cada um por
-                             si. Sem ela, a margem de ajuste do numero aumentava a altura do
-                             conjunto e arrastava o ponto junto, o que impedia acertar os dois. -->
-                        <StackPanel
-                            x:Name="NotificationBadge"
-                            Orientation="Horizontal"
-                            Spacing="4"
-                            Height="15"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed">
-                            <Ellipse
-                                x:Name="NotificationDot"
-                                Width="5"
-                                Height="5"
-                                VerticalAlignment="Center" />
-                            <!-- TextLineBounds="Tight" alinha pelo desenho do algarismo, e nao
-                                 pela caixa de linha da fonte: o Segoe UI tem ascendente alto e
-                                 centralizar a caixa deixava o numero abaixo do ponto. A margem
-                                 acerta o pixel que sobra do arredondamento. -->
-                            <TextBlock
-                                x:Name="NotificationBadgeText"
-                                FontSize="9.5"
-                                FontWeight="SemiBold"
-                                TextLineBounds="Tight"
-                                Margin="0,0,0,1.7"
-                                VerticalAlignment="Center" />
-                        </StackPanel>
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                        <Ellipse
+                            x:Name="NotificationDot"
+                            Width="5"
+                            Height="5"
+                            VerticalAlignment="Center" />
+                        <!-- TextLineBounds="Tight" alinha pelo desenho do algarismo, e nao
+                             pela caixa de linha da fonte: o Segoe UI tem ascendente alto e
+                             centralizar a caixa deixava o numero abaixo do ponto. A margem
+                             acerta o pixel que sobra do arredondamento. -->
+                        <TextBlock
+                            x:Name="NotificationBadgeText"
+                            FontSize="9.5"
+                            FontWeight="SemiBold"
+                            TextLineBounds="Tight"
+                            Margin="0,0,0,1.7"
+                            VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
 

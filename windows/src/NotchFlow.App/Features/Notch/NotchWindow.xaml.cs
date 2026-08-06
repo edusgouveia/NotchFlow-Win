@@ -487,8 +487,8 @@ public sealed partial class NotchWindow : Window
             NotificationBadge.Visibility = Visibility.Collapsed;
         }
 
-        // O risco no meio some só quando há capa ocupando o lugar dele.
-        CollapsedIndicator.Visibility = hasArtwork ? Visibility.Collapsed : Visibility.Visible;
+        // O risco fica sempre: é ele que dá à ilha a forma de alça. A capa entra na coluna
+        // da esquerda e não disputa o espaço do meio, então não há por que escondê-lo.
         CollapsedIndicator.Background = new SolidColorBrush(
             hasMedia ? accent : Color.FromArgb(0x9E, 0x9E, 0x9E, 0x9E));
 
