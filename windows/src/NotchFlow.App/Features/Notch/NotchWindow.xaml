@@ -71,10 +71,14 @@
 
                         <!-- Indicador persistente de notificacoes: e o que a ilha faz que o
                              toast nao faz, ja que o toast some e este fica. -->
+                        <!-- Altura fixa para o ponto e o numero se centralizarem cada um por
+                             si. Sem ela, a margem de ajuste do numero aumentava a altura do
+                             conjunto e arrastava o ponto junto, o que impedia acertar os dois. -->
                         <StackPanel
                             x:Name="NotificationBadge"
                             Orientation="Horizontal"
                             Spacing="4"
+                            Height="15"
                             VerticalAlignment="Center"
                             Visibility="Collapsed">
                             <Ellipse
@@ -82,10 +86,16 @@
                                 Width="5"
                                 Height="5"
                                 VerticalAlignment="Center" />
+                            <!-- TextLineBounds="Tight" alinha pelo desenho do algarismo, e nao
+                                 pela caixa de linha da fonte: o Segoe UI tem ascendente alto e
+                                 centralizar a caixa deixava o numero abaixo do ponto. A margem
+                                 acerta o pixel que sobra do arredondamento. -->
                             <TextBlock
                                 x:Name="NotificationBadgeText"
                                 FontSize="9.5"
                                 FontWeight="SemiBold"
+                                TextLineBounds="Tight"
+                                Margin="0,0,0,1.7"
                                 VerticalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
