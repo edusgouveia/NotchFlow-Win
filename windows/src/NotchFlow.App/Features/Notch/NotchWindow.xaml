@@ -21,7 +21,7 @@
 
                 <!-- Estado recolhido: capa a esquerda, risco no meio, estado e contador
                      a direita. A largura e fixa, entao a grade posiciona cada parte. -->
-                <Grid x:Name="CollapsedContent" Padding="7,0">
+                <Grid x:Name="CollapsedContent" Padding="8,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -41,10 +41,12 @@
                         </Border.Background>
                     </Border>
 
-                    <!-- O risco no meio: presenca discreta quando nao ha capa para mostrar. -->
+                    <!-- O risco atravessa as tres colunas e se centraliza no conjunto, nao
+                         na coluna do meio. Preso a coluna, ele saia do centro conforme o
+                         contador a direita crescia, e ficava visivelmente torto. -->
                     <Border
                         x:Name="CollapsedIndicator"
-                        Grid.Column="1"
+                        Grid.ColumnSpan="3"
                         Width="26"
                         Height="2.5"
                         CornerRadius="1.25"
@@ -56,6 +58,7 @@
                         Grid.Column="2"
                         Orientation="Horizontal"
                         Spacing="4"
+                        Margin="0,0,4,0"
                         VerticalAlignment="Center">
 
                         <FontIcon
@@ -68,23 +71,23 @@
 
                         <!-- Indicador persistente de notificacoes: e o que a ilha faz que o
                              toast nao faz, ja que o toast some e este fica. -->
-                        <Border
+                        <StackPanel
                             x:Name="NotificationBadge"
-                            Height="14"
-                            MinWidth="14"
-                            CornerRadius="7"
-                            Padding="4,0"
-                            Background="#6264A7"
+                            Orientation="Horizontal"
+                            Spacing="4"
                             VerticalAlignment="Center"
                             Visibility="Collapsed">
+                            <Ellipse
+                                x:Name="NotificationDot"
+                                Width="5"
+                                Height="5"
+                                VerticalAlignment="Center" />
                             <TextBlock
                                 x:Name="NotificationBadgeText"
-                                FontSize="9"
+                                FontSize="9.5"
                                 FontWeight="SemiBold"
-                                Foreground="White"
-                                HorizontalAlignment="Center"
                                 VerticalAlignment="Center" />
-                        </Border>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
 

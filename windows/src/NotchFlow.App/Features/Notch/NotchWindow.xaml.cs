@@ -218,6 +218,20 @@ public sealed partial class NotchWindow : Window
         NotificationOverflow.Text = overflow == 1 ? "+1 mais" : $"+{overflow} mais";
     }
 
+    /// <summary>
+    /// Aparência do contador: um ponto na cor da fonte e o número ao lado, sem cápsula.
+    ///
+    /// Substituiu um disco saturado com o número branco dentro, que parecia um adesivo
+    /// colado na ilha em vez de parte dela. Sem cápsula, o contador conversa com o risco
+    /// cinza do meio, que também é um elemento solto sobre o preto.
+    /// </summary>
+    private void ApplyBadgeStyle(Color marca)
+    {
+        NotificationDot.Fill = new SolidColorBrush(marca);
+        NotificationBadgeText.Foreground = new SolidColorBrush(
+            Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF));
+    }
+
     private static Color FromArgb(uint value) => Color.FromArgb(
         (byte)((value >> 24) & 0xFF),
         (byte)((value >> 16) & 0xFF),
@@ -464,7 +478,9 @@ public sealed partial class NotchWindow : Window
         {
             NotificationBadge.Visibility = Visibility.Visible;
             NotificationBadgeText.Text = badgeCount > 9 ? "9+" : badgeCount.ToString();
-            NotificationBadge.Background = new SolidColorBrush(FromArgb(notifications.Accent));
+
+            var marca = FromArgb(notifications.Accent);
+            ApplyBadgeStyle(marca);
         }
         else
         {
